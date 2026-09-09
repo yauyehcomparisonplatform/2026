@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨平台商品格價搜尋</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            padding-bottom: 40px;
+        }
+        /* 頂部橫幅圖片樣式 */
+        .top-banner {
+            width: 100%;
+            max-height: 350px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e2e8f0;
+        }
+        .top-banner img {
+            width: 100%;
+            height: auto;
+            max-width: 1200px;
+            object-fit: cover;
+            display: block;
+        }
+        .container {
+            max-width: 950px;
+            margin: 20px auto 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            text-align: center;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: #0066cc;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            min-width: 750px;
+        }
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #4a5568;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        tr.best-price {
+            background-color: #f0fdf4;
+        }
+        .price {
+            font-weight: bold;
+            color: #1a202c;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+        .tag-lowest {
+            display: inline-block;
+            background-color: #22c55e;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            margin-left: 4px;
+            font-weight: normal;
+        }
+        .address {
+            color: #718096;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .weight {
+            color: #4a5568;
+            white-space: nowrap;
+        }
+        .buy-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #edf2f7;
+            color: #2d3748;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .buy-btn:hover {
+            background-color: #e2e8f0;
+            color: #1a202c;
+        }
+        .no-result {
+            text-align: center;
+            color: #a0aec0;
+            padding: 30px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 頂部橫幅圖片區塊 -->
+<div class="top-banner">
+    <img src="https://img.notionusercontent.com/s3/prod-files-secure%2Fb5311cdf-0a2c-81bc-8f7d-000315b8c126%2F20718114-b69a-4d26-a478-45d75498efb9%2FPrice_comparison_platform_Notion_banner_(1500_x_800_px)_(1).png/size/w=770?tok=eyJhbGciOiJFUzI1NiIsImtpZCI6IlI3dzVrRnREIiwidHlwIjoiSldUIn0.eyJzcGFjZUlkIjoiYjUzMTFjZGYtMGEyYy04MWJjLThmN2QtMDAwMzE1YjhjMTI2IiwiZmlsZUlkIjoiMjA3MTgxMTQtYjY5YS00ZDI2LWE0NzgtNDVkNzU0OThlZmI5IiwicmVjb3JkIjoiYmxvY2s6MzFhMTFjZGYtMGEyYy04MzdjLWFlMWQtODE3ZjlmNzkzMTkxIiwiZXhwIjoxNzg4OTc3OTk5fQ.bbfy45tb77307UD4OguEIryJOZJvDqhOwJd44mNCUWe-fUY-Uher4v5rebzz1eLzQQtI5MAD26VJXYfBHwaXNg&imgBuildSrc=createSecureFileAccessTokenImageUrl&mtd=so" alt="格價平台 Banner">
+</div>
+
+<div class="container">
+    <h1>跨平台商品格價搜尋</h1>
+    <p class="subtitle">即時比較各大商店價格、規格與地址，自動找出最低價優惠</p>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="輸入商品關鍵字（如：白米, iPhone, 貓糧...）" onkeypress="handleKeyPress(event)">
+        <button onclick="performSearch()">格價搜尋</button>
+    </div>
+
+    <div class="table-responsive">
+        <div id="resultArea">
+            <p class="no-result">請在上方輸入框輸入關鍵字開始搜尋。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 商品資料庫
+    const storeDatabase = [
+        { 
+            name: "金鳳香米", 
+            weight: "5 公斤 (kg)", 
+            price: 85, 
+            store: "百佳超級市場", 
+            address: "銅鑼灣軒尼詩道500號興利中心地下", 
+            url: "https://www.parknshop.com" 
+        },
+        { 
+            name: "金鳳泰國頂級香米", 
+            weight: "5 公斤 (kg)", 
+            price: 82, 
+            store: "惠康超級市場", 
+            address: "中環德輔道中25號安樂園大廈地下", 
+            url: "https://www.wellcome.com.hk" 
+        },
+        { 
+            name: "金鳳泰國香米 (官方直送)", 
+            weight: "5 公斤 (kg)", 
+            price: 79, 
+            store: "HKTVmall", 
+            address: "網店 (HKTVmall O2O 門市可自取)", 
+            url: "https://www.hktvmall.com" 
+        },
+        { 
+            name: "Apple iPhone 15 128GB", 
+            weight: "171 克 (g)", 
+            price: 6599, 
+            store: "豐澤 Fortress", 
+            address: "九龍塘達之路80號又一城MTR層01號舖", 
+            url: "https://www.fortress.com.hk" 
+        },
+        { 
+            name: "Apple iPhone 15 128GB", 
+            weight: "171 克 (g)", 
+            price: 6499, 
+            store: "友和 YOHO", 
+            address: "長沙灣長義街9號D2 Place ONE 2樓201號舖", 
+            url: "https://www.yohohongkong.com" 
+        }
+    ];
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            performSearch();
+        }
+    }
+
+    function performSearch() {
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        const resultArea = document.getElementById('resultArea');
+
+        if (!query) {
+            resultArea.innerHTML = '<p class="no-result">請先輸入關鍵字。</p>';
+            return;
+        }
+
+        // 過濾搜尋結果
+        const filtered = storeDatabase.filter(item => 
+            item.name.toLowerCase().includes(query) || 
+            item.store.toLowerCase().includes(query) ||
+            item.weight.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+            resultArea.innerHTML = '<p class="no-result">未有找到相關商品的價格資訊。</p>';
+            return;
+        }
+
+        // 按價格由低至高排序
+        filtered.sort((a, b) => a.price - b.price);
+
+        // 建立 HTML 表格
+        let tableHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>商品全名</th>
+                        <th>重量 / 規格</th>
+                        <th>價格 (HKD)</th>
+                        <th>商店</th>
+                        <th>門市地址</th>
+                        <th>購買</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        filtered.forEach((item, index) => {
+            const isLowest = index === 0;
+            tableHTML += `
+                <tr class="${isLowest ? 'best-price' : ''}">
+                    <td>${item.name}</td>
+                    <td class="weight">${item.weight || '-'}</td>
+                    <td class="price">
+                        $${item.price.toLocaleString()}
+                        ${isLowest ? '<span class="tag-lowest">最低價</span>' : ''}
+                    </td>
+                    <td><strong>${item.store}</strong></td>
+                    <td class="address">${item.address || '網上商店'}</td>
+                    <td><a href="${item.url}" target="_blank" class="buy-btn">前往連結</a></td>
+                </tr>
+            `;
+        });
+
+        tableHTML += '</tbody></table>';
+        resultArea.innerHTML = tableHTML;
+    }
+</script>
+
+</body>
+</html>
