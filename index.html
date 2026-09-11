@@ -16,7 +16,6 @@
             color: #333;
             padding-bottom: 40px;
         }
-        /* 頂部橫幅圖片樣式 */
         .top-banner {
             width: 100%;
             max-height: 350px;
@@ -40,12 +39,37 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            position: relative;
+        }
+        /* 語言切換按鈕 */
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .lang-btn {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background-color: #0066cc;
+            color: white;
+            border-color: #0066cc;
         }
         h1 {
-            font-size: 24px;
+            font-size: 22px;
             margin-bottom: 8px;
             color: #1a1a1a;
             text-align: center;
+            padding-right: 40px;
+            padding-left: 40px;
         }
         p.subtitle {
             text-align: center;
@@ -56,7 +80,7 @@
         .search-container {
             display: flex;
             gap: 10px;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
         }
         input[type="text"] {
             flex: 1;
@@ -70,7 +94,7 @@
         input[type="text"]:focus {
             border-color: #0066cc;
         }
-        button {
+        button.search-btn {
             padding: 12px 24px;
             background-color: #0066cc;
             color: white;
@@ -81,8 +105,31 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        button:hover {
+        button.search-btn:hover {
             background-color: #0052a3;
+        }
+        .quick-tags {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: #666;
+        }
+        .tag-btn {
+            background-color: #edf2f7;
+            color: #2d3748;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tag-btn:hover {
+            background-color: #0066cc;
+            color: white;
         }
         .table-responsive {
             overflow-x: auto;
@@ -91,7 +138,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            min-width: 750px;
+            min-width: 800px;
         }
         th, td {
             padding: 14px 12px;
@@ -111,11 +158,34 @@
         tr.best-price {
             background-color: #f0fdf4;
         }
+        tr.flash-sale-row {
+            background-color: #fff5f5;
+        }
         .price {
             font-weight: bold;
             color: #1a202c;
             font-size: 15px;
             white-space: nowrap;
+        }
+        .original-price {
+            text-decoration: line-through;
+            color: #a0aec0;
+            font-size: 12px;
+            margin-right: 4px;
+            font-weight: normal;
+        }
+        .unit-price {
+            display: block;
+            font-size: 11px;
+            color: #718096;
+            font-weight: normal;
+        }
+        .countdown-timer {
+            display: block;
+            font-size: 11px;
+            color: #e53e3e;
+            font-weight: bold;
+            margin-top: 2px;
         }
         .tag-lowest {
             display: inline-block;
@@ -127,10 +197,25 @@
             margin-left: 4px;
             font-weight: normal;
         }
-        .address {
-            color: #718096;
+        .tag-flash {
+            display: inline-block;
+            background-color: #e53e3e;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            margin-left: 4px;
+            font-weight: normal;
+        }
+        .address-link {
+            color: #2b6cb0;
+            text-decoration: none;
             font-size: 13px;
             line-height: 1.4;
+        }
+        .address-link:hover {
+            text-decoration: underline;
+            color: #0066cc;
         }
         .weight {
             color: #4a5568;
@@ -160,71 +245,169 @@
 </head>
 <body>
 
-<!-- 頂部橫幅圖片區塊 -->
 <div class="top-banner">
-    <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png">
+    <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png" alt="YAU嘢格價平台 Banner">
 </div>
 
 <div class="container">
+    <!-- 切換語言按鈕 -->
+    <div class="lang-switch">
+        <button class="lang-btn" onclick="toggleLanguage()" id="langToggleBtn">English</button>
+    </div>
+
     <h1>YAU嘢格價資訊搜尋 YAU Yeh Price Comparison Info Searching</h1>
-    <p class="subtitle">即時比較各大商店價格、規格與地址，自動找出最低價優惠</p>
+    <p class="subtitle" id="uiSubtitle">即時比較各大商店價格、規格與地址，自動找出最低價優惠</p>
     
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="輸入商品關鍵字（如：白米, iPhone, 貓糧...）" onkeypress="handleKeyPress(event)">
-        <button onclick="performSearch()">格價搜尋</button>
+        <input type="text" id="searchInput" placeholder="輸入商品關鍵字（如：兩餸飯, 魚蛋粉, iPhone...）" onkeypress="handleKeyPress(event)">
+        <button class="search-btn" onclick="performSearch()" id="uiSearchBtn">格價搜尋</button>
+    </div>
+
+    <div class="quick-tags">
+        <span id="uiHotSearch">🔥 熱門搜尋：</span>
+        <button class="tag-btn" onclick="quickSearch('兩餸飯')">兩餸飯 Rice with 2 Dishes</button>
+        <button class="tag-btn" onclick="quickSearch('魚蛋粉')">魚蛋粉 Fish Ball Noodles</button>
+        <button class="tag-btn" onclick="quickSearch('iPhone')">iPhone</button>
     </div>
 
     <div class="table-responsive">
         <div id="resultArea">
-            <p class="no-result">請在上方輸入框輸入關鍵字開始搜尋。</p>
+            <p class="no-result" id="uiInitialPrompt">請在上方輸入框輸入關鍵字開始搜尋。</p>
         </div>
     </div>
 </div>
 
 <script>
-    // 商品資料庫
+    // 當前語言 (zh: 中文, en: 英文)
+    let currentLang = 'zh';
+
+    // UI 詞彙翻譯字典
+    const i18n = {
+        zh: {
+            subtitle: "即時比較各大商店價格、規格與地址，自動找出最低價優惠",
+            placeholder: "輸入商品關鍵字（如：兩餸飯, 魚蛋粉, iPhone...）",
+            searchBtn: "格價搜尋",
+            hotSearch: "🔥 熱門搜尋：",
+            initialPrompt: "請在上方輸入框輸入關鍵字開始搜尋。",
+            noResult: "未有找到相關商品的價格資訊。",
+            inputPrompt: "請先輸入關鍵字。",
+            colName: "商品全名",
+            colWeight: "重量 / 規格",
+            colPrice: "價格 (HKD)",
+            colStore: "商店",
+            colAddress: "門市地址 (點擊開啟地圖)",
+            colLink: "連結",
+            onlineStore: "網上商店",
+            buyBtn: "前往連結",
+            lowestTag: "最低價",
+            flashTag: "限時優惠",
+            unitWord: "單位",
+            approx: "約",
+            timeEnded: "⏰ 優惠已結束",
+            leftTime: "⏰ 剩餘 "
+        },
+        en: {
+            subtitle: "Compare prices, specs, and store addresses to find the best deals automatically.",
+            placeholder: "Enter keywords (e.g. 2 dishes, Fish Ball Noodles, iPhone...)",
+            searchBtn: "Search",
+            hotSearch: "🔥 Popular Searches:",
+            initialPrompt: "Please enter keywords above to start searching.",
+            noResult: "No price comparison results found.",
+            inputPrompt: "Please enter a keyword first.",
+            colName: "Product Name",
+            colWeight: "Weight / Spec",
+            colPrice: "Price (HKD)",
+            colStore: "Store",
+            colAddress: "Store Address (Click for Map)",
+            colLink: "Link",
+            onlineStore: "Online Store",
+            buyBtn: "Visit Site",
+            lowestTag: "Lowest",
+            flashTag: "Flash Sale",
+            unitWord: "unit",
+            approx: "approx.",
+            timeEnded: "⏰ Deal Ended",
+            leftTime: "⏰ "
+        }
+    };
+
+    // 雙語商品資料庫
     const storeDatabase = [
         { 
-            name: "魚蛋粉麵", 
-            weight: "1 碗", 
+            name: { zh: "魚蛋粉麵", en: "Fish Ball Noodles" },
+            weight: { zh: "1 碗", en: "1 bowl" },
             price: 25, 
-            store: "潮成園 Chiu Shing Yuen", 
-            address: "旺角上海街491號 491 Shanghai St, Mong Kok, Kowloon, Hong Kong SAR", 
+            store: { zh: "潮成園", en: "Chiu Shing Yuen" },
+            address: { zh: "旺角上海街491號", en: "491 Shanghai St, Mong Kok, Kowloon" },
             url: "https://maps.app.goo.gl/SWgDG2CvGiCyqNfE7" 
         },
         { 
-            name: "兩餸飯", 
-            weight: "2 餸", 
-            price: 28, 
-            store: "港佳美食 Kong Ka Restaurest", 
-            address: "九龍旺角上海街523號 523 Shanghai St, Mong Kok, Kowloon, Hong Kong SAR", 
-            url: "https://maps.app.goo.gl/Cq9nRPX7BEKWU83H6" 
+            name: { zh: "兩餸飯 (午市限時優惠)", en: "Rice with 2 Dishes (Lunch Offer)" },
+            weight: { zh: "2 餸", en: "2 dishes" },
+            price: 22, 
+            originalPrice: 28,
+            store: { zh: "港佳美食", en: "Kong Ka Restaurant" },
+            address: { zh: "九龍旺角上海街523號", en: "523 Shanghai St, Mong Kok, Kowloon" },
+            url: "https://maps.app.goo.gl/Cq9nRPX7BEKWU83H6",
+            isFlashSale: true,
+            expireDate: "2026-10-31 23:59:59"
         },
         { 
-            name: "兩餸飯", 
-            weight: "2 餸", 
+            name: { zh: "兩餸飯", en: "Rice with 2 Dishes" },
+            weight: { zh: "2 餸", en: "2 dishes" },
             price: 30, 
-            store: "雄記小廚 Hung Kee Kitchen", 
-            address: "油麻地砵蘭街65號 65 Portland St, Yau Ma Tei, Kowloon, Hong Kong SAR", 
+            store: { zh: "雄記小廚", en: "Hung Kee Kitchen" },
+            address: { zh: "油麻地砵蘭街65號", en: "65 Portland St, Yau Ma Tei, Kowloon" },
             url: "https://maps.app.goo.gl/VJ1dBHpomLs1LWR79" 
         },
         { 
-            name: "Apple iPhone 15 128GB", 
-            weight: "171 克 (g)", 
+            name: { zh: "Apple iPhone 15 128GB", en: "Apple iPhone 15 128GB" },
+            weight: { zh: "171 克 (g)", en: "171 g" },
             price: 6599, 
-            store: "豐澤 Fortress", 
-            address: "九龍塘達之路80號又一城MTR層01號舖", 
+            store: { zh: "豐澤 Fortress", en: "Fortress" },
+            address: { zh: "九龍塘達之路80號又一城MTR層01號舖", en: "Shop 01, MTR Level, Festival Walk, Kowloon Tong" },
             url: "https://www.fortress.com.hk" 
         },
         { 
-            name: "Apple iPhone 15 128GB", 
-            weight: "171 克 (g)", 
-            price: 6499, 
-            store: "友和 YOHO", 
-            address: "長沙灣長義街9號D2 Place ONE 2樓201號舖", 
-            url: "https://www.yohohongkong.com" 
+            name: { zh: "Apple iPhone 15 128GB (快閃優惠)", en: "Apple iPhone 15 128GB (Flash Deal)" },
+            weight: { zh: "171 克 (g)", en: "171 g" },
+            price: 5999, 
+            originalPrice: 6499,
+            store: { zh: "友和 YOHO", en: "YOHO" },
+            address: { zh: "長沙灣長義街9號D2 Place ONE 2樓201號舖", en: "Shop 201, 2/F, D2 Place ONE, Lai Chi Kok" },
+            url: "https://www.yohohongkong.com",
+            isFlashSale: true,
+            expireDate: "2026-09-30 23:59:59"
         }
     ];
+
+    let timerInterval = null;
+
+    // 切換中英文語言
+    function toggleLanguage() {
+        currentLang = currentLang === 'zh' ? 'en' : 'zh';
+        const langBtn = document.getElementById('langToggleBtn');
+        langBtn.innerText = currentLang === 'zh' ? 'English' : '繁體中文';
+
+        // 更新介面固定文字
+        document.getElementById('uiSubtitle').innerText = i18n[currentLang].subtitle;
+        document.getElementById('searchInput').placeholder = i18n[currentLang].placeholder;
+        document.getElementById('uiSearchBtn').innerText = i18n[currentLang].searchBtn;
+        document.getElementById('uiHotSearch').innerText = i18n[currentLang].hotSearch;
+
+        // 如果目前有搜尋結果，重新印出畫面
+        const searchInputVal = document.getElementById('searchInput').value.trim();
+        if (searchInputVal) {
+            performSearch();
+        } else {
+            document.getElementById('resultArea').innerHTML = `<p class="no-result">${i18n[currentLang].initialPrompt}</p>`;
+        }
+    }
+
+    function quickSearch(keyword) {
+        document.getElementById('searchInput').value = keyword;
+        performSearch();
+    }
 
     function handleKeyPress(event) {
         if (event.key === 'Enter') {
@@ -232,41 +415,89 @@
         }
     }
 
+    function calculateUnitPrice(price, weightStr) {
+        if (!weightStr) return '';
+        const match = weightStr.match(/(\d+(\.\d+)?)/);
+        if (match) {
+            const num = parseFloat(match[0]);
+            if (num > 0) {
+                const unitPrice = (price / num).toFixed(1);
+                const unitName = weightStr.replace(/[\d\.\s]/g, '') || i18n[currentLang].unitWord;
+                return `(${i18n[currentLang].approx} HK$${unitPrice} / ${unitName})`;
+            }
+        }
+        return '';
+    }
+
+    function updateTimers() {
+        const timerElements = document.querySelectorAll('.countdown-timer');
+        const now = new Date().getTime();
+
+        timerElements.forEach(el => {
+            const expireTime = new Date(el.dataset.expire).getTime();
+            const distance = expireTime - now;
+
+            if (distance < 0) {
+                el.innerHTML = i18n[currentLang].timeEnded;
+                el.style.color = '#a0aec0';
+            } else {
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                let timeStr = i18n[currentLang].leftTime;
+                if (days > 0) timeStr += currentLang === 'zh' ? `${days}天 ` : `${days}d `;
+                timeStr += currentLang === 'zh' ? `${hours}時${minutes}分${seconds}秒` : `${hours}h ${minutes}m ${seconds}s left`;
+                el.innerHTML = timeStr;
+            }
+        });
+    }
+
     function performSearch() {
+        if (timerInterval) clearInterval(timerInterval);
+
         const query = document.getElementById('searchInput').value.trim().toLowerCase();
         const resultArea = document.getElementById('resultArea');
 
         if (!query) {
-            resultArea.innerHTML = '<p class="no-result">請先輸入關鍵字。</p>';
+            resultArea.innerHTML = `<p class="no-result">${i18n[currentLang].inputPrompt}</p>`;
             return;
         }
 
-        // 過濾搜尋結果
-        const filtered = storeDatabase.filter(item => 
-            item.name.toLowerCase().includes(query) || 
-            item.store.toLowerCase().includes(query) ||
-            item.weight.toLowerCase().includes(query)
-        );
+        // 搜尋過濾：同時比對中文與英文名稱、商店名、規格
+        const filtered = storeDatabase.filter(item => {
+            const nameZh = (item.name.zh || '').toLowerCase();
+            const nameEn = (item.name.en || '').toLowerCase();
+            const storeZh = (item.store.zh || '').toLowerCase();
+            const storeEn = (item.store.en || '').toLowerCase();
+            const weightZh = (item.weight.zh || '').toLowerCase();
+            const weightEn = (item.weight.en || '').toLowerCase();
+
+            return nameZh.includes(query) || nameEn.includes(query) ||
+                   storeZh.includes(query) || storeEn.includes(query) ||
+                   weightZh.includes(query) || weightEn.includes(query);
+        });
 
         if (filtered.length === 0) {
-            resultArea.innerHTML = '<p class="no-result">未有找到相關商品的價格資訊。</p>';
+            resultArea.innerHTML = `<p class="no-result">${i18n[currentLang].noResult}</p>`;
             return;
         }
 
-        // 按價格由低至高排序
         filtered.sort((a, b) => a.price - b.price);
 
-        // 建立 HTML 表格
+        const t = i18n[currentLang];
+
         let tableHTML = `
             <table>
                 <thead>
                     <tr>
-                        <th>商品全名</th>
-                        <th>重量 / 規格</th>
-                        <th>價格 (HKD)</th>
-                        <th>商店</th>
-                        <th>門市地址</th>
-                        <th>購買</th>
+                        <th>${t.colName}</th>
+                        <th>${t.colWeight}</th>
+                        <th>${t.colPrice}</th>
+                        <th>${t.colStore}</th>
+                        <th>${t.colAddress}</th>
+                        <th>${t.colLink}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -274,23 +505,47 @@
 
         filtered.forEach((item, index) => {
             const isLowest = index === 0;
+            
+            // 抓取當前語言對應的文字
+            const nameText = item.name[currentLang] || item.name.zh;
+            const weightText = item.weight[currentLang] || item.weight.zh;
+            const storeText = item.store[currentLang] || item.store.zh;
+            const addressText = item.address ? (item.address[currentLang] || item.address.zh) : '';
+
+            const unitPriceText = calculateUnitPrice(item.price, weightText);
+            const mapUrl = addressText ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}` : '#';
+
+            let rowClass = isLowest ? 'best-price' : '';
+            if (item.isFlashSale) rowClass += ' flash-sale-row';
+
             tableHTML += `
-                <tr class="${isLowest ? 'best-price' : ''}">
-                    <td>${item.name}</td>
-                    <td class="weight">${item.weight || '-'}</td>
-                    <td class="price">
-                        $${item.price.toLocaleString()}
-                        ${isLowest ? '<span class="tag-lowest">最低價</span>' : ''}
+                <tr class="${rowClass}">
+                    <td>
+                        ${nameText}
+                        ${item.isFlashSale ? `<span class="tag-flash">${t.flashTag}</span>` : ''}
                     </td>
-                    <td><strong>${item.store}</strong></td>
-                    <td class="address">${item.address || '網上商店'}</td>
-                    <td><a href="${item.url}" target="_blank" class="buy-btn">前往連結</a></td>
+                    <td class="weight">${weightText || '-'}</td>
+                    <td class="price">
+                        ${item.originalPrice ? `<span class="original-price">$${item.originalPrice.toLocaleString()}</span>` : ''}
+                        $${item.price.toLocaleString()}
+                        ${isLowest ? `<span class="tag-lowest">${t.lowestTag}</span>` : ''}
+                        ${unitPriceText ? `<span class="unit-price">${unitPriceText}</span>` : ''}
+                        ${item.isFlashSale && item.expireDate ? `<span class="countdown-timer" data-expire="${item.expireDate}">...</span>` : ''}
+                    </td>
+                    <td><strong>${storeText}</strong></td>
+                    <td>
+                        ${addressText ? `<a href="${mapUrl}" target="_blank" class="address-link">📍 ${addressText}</a>` : t.onlineStore}
+                    </td>
+                    <td><a href="${item.url}" target="_blank" class="buy-btn">${t.buyBtn}</a></td>
                 </tr>
             `;
         });
 
         tableHTML += '</tbody></table>';
         resultArea.innerHTML = tableHTML;
+
+        updateTimers();
+        timerInterval = setInterval(updateTimers, 1000);
     }
 </script>
 
