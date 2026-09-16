@@ -14,6 +14,7 @@
             --card-bg: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --lowest-price-color: #16a34a; /* 最低價專用綠色 */
         }
 
         * {
@@ -65,7 +66,7 @@
         .search-box {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         input[type="text"] {
@@ -80,6 +81,21 @@
         input[type="text"]:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        /* 最低價資訊提示列 */
+        .lowest-summary {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .loading, .empty-state {
@@ -100,6 +116,13 @@
             padding: 16px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.2s ease;
+        }
+
+        /* 最低價商品卡片特別標示外框 */
+        .product-card.is-lowest {
+            border: 2px solid var(--lowest-price-color);
+            background-color: #fafdfb;
         }
 
         .card-header {
@@ -127,6 +150,14 @@
             font-weight: 500;
         }
 
+        /* 【新增】最低價 Badge 樣式 */
+        .badge-lowest {
+            background-color: #dcfce7;
+            color: var(--lowest-price-color);
+            border: 1px solid #86efac;
+            font-weight: 700;
+        }
+
         .badge-bulk {
             background-color: #ffedd5;
             color: #c2410c;
@@ -150,6 +181,10 @@
             font-size: 22px;
             font-weight: 700;
             color: var(--primary-color);
+        }
+
+        .product-card.is-lowest .current-price {
+            color: var(--lowest-price-color);
         }
 
         .original-price {
@@ -216,6 +251,9 @@
         <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
     </div>
 
+    <!-- 【新增】顯示搜尋結果最低價的摘要列 -->
+    <div id="lowestSummary" class="lowest-summary" style="display: none;"></div>
+
     <div id="loading" class="loading">資料載入中，請稍候...</div>
     <div id="productList" class="product-list"></div>
 
@@ -226,7 +264,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let storeDatabase = [];
-        let currentLang = 'zh'; // 預設語言：'zh' 或 'en'
+        let currentLang = 'zh';
 
         // 2. 雙語 UI 字典
         const translations = {
@@ -237,6 +275,8 @@
                 loading: "資料載入中，請稍候...",
                 loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
                 emptyState: "沒有找到相關商品",
+                lowestPriceBadge: "🔥 最低價",
+                lowestSummaryText: (min) => `🏷️ 目前搜尋結果最低價為：<strong>$${min}</strong>`,
                 flashSale: "限時優惠",
                 bulkDiscount: (qty, price) => `買 ${qty} 件以上每件 $${price}`,
                 buyQty: "購買數量:",
@@ -251,6 +291,8 @@
                 loading: "Loading data, please wait...",
                 loadError: "Failed to load data. Please check Supabase setup.",
                 emptyState: "No products found",
+                lowestPriceBadge: "🔥 Lowest Price",
+                lowestSummaryText: (min) => `🏷️ Lowest price in current results: <strong>$${min}</strong>`,
                 flashSale: "Flash Sale",
                 bulkDiscount: (qty, price) => `Buy ${qty}+ for $${price} each`,
                 buyQty: "Qty:",
@@ -260,7 +302,7 @@
             }
         };
 
-        // 【新增】自動生成 Google 地圖搜尋 URL 函式
+        // 自動生成 Google 地圖搜尋 URL
         function getGoogleMapUrl(store, address) {
             const query = [store, address].filter(Boolean).join(' ');
             if (!query) return null;
@@ -272,18 +314,16 @@
             currentLang = currentLang === 'zh' ? 'en' : 'zh';
             document.documentElement.lang = currentLang === 'zh' ? 'zh-Hant' : 'en';
             
-            // 更新 UI 固定介面文字
             const t = translations[currentLang];
             document.getElementById('siteTitle').innerText = t.title;
             document.getElementById('siteSubtitle').innerText = t.subtitle;
             document.getElementById('searchInput').placeholder = t.searchPlaceholder;
             document.getElementById('langBtn').innerText = t.langBtn;
 
-            // 重新渲染商品列表
             handleSearch();
         }
 
-        // 4. 從 Supabase 雲端資料庫抓取資料
+        // 4. 從 Supabase 抓取資料
         async function fetchProductsFromCloud() {
             const t = translations[currentLang];
             try {
@@ -293,7 +333,6 @@
 
                 if (error) throw error;
 
-                // 映射資料並提供雙語 fallback
                 storeDatabase = data.map(item => ({
                     id: item.id,
                     name: { 
@@ -330,7 +369,7 @@
             }
         }
 
-        // 5. 多件優惠計算邏輯
+        // 5. 試算邏輯
         function calculatePrice(product, quantity) {
             const qty = Math.max(1, parseInt(quantity) || 1);
             const bulk = product.bulkDiscount;
@@ -352,7 +391,7 @@
             };
         }
 
-        // 6. 動態更新試算結果
+        // 6. 更新試算結果
         function updateCalc(productId) {
             const t = translations[currentLang];
             const product = storeDatabase.find(p => p.id === productId);
@@ -365,15 +404,24 @@
             resultDisplay.innerHTML = t.totalPrice(res.totalPrice, res.unitPrice);
         }
 
-        // 7. 渲染商品卡片列表
+        // 7. 渲染商品卡片列表 (含最低價計算與標示)
         function renderProducts(products) {
             const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
             const t = translations[currentLang];
             
             if (products.length === 0) {
                 container.innerHTML = `<div class="empty-state">${t.emptyState}</div>`;
+                summaryBox.style.display = 'none';
                 return;
             }
+
+            // 【核心點 1】：找出目前搜尋列表中的最低單價
+            const minPrice = Math.min(...products.map(p => p.price));
+
+            // 更新頂部最低價摘要提示條
+            summaryBox.style.display = 'flex';
+            summaryBox.innerHTML = t.lowestSummaryText(minPrice);
 
             container.innerHTML = products.map(product => {
                 const name = product.name[currentLang];
@@ -381,14 +429,18 @@
                 const store = product.store[currentLang];
                 const address = product.address[currentLang];
 
-                // 【核心修改】：判斷地圖連結邏輯
-                // 若資料庫有填寫自訂網址（url）則優先使用，否則自動根據「商店名稱 + 地址」生成 Google Maps 連結
+                // 【核心點 2】：判斷此商品是否為最低價商品
+                const isLowest = product.price === minPrice;
+
                 const mapUrl = (product.url && product.url !== '#') 
                     ? product.url 
                     : getGoogleMapUrl(store, address);
 
-                // 標籤判定
+                // 標籤判定 (包含最低價 Badge)
                 let badges = '';
+                if (isLowest) {
+                    badges += `<span class="badge badge-lowest">${t.lowestPriceBadge}</span>`;
+                }
                 if (product.isFlashSale) {
                     badges += `<span class="badge badge-flash">${t.flashSale}</span>`;
                 }
@@ -410,7 +462,7 @@
                 ` : '';
 
                 return `
-                    <div class="product-card">
+                    <div class="product-card ${isLowest ? 'is-lowest' : ''}">
                         <div class="card-header">
                             <div>
                                 <div class="product-title">${name}</div>
@@ -455,7 +507,7 @@
             renderProducts(filtered);
         }
 
-        // 頁面初次載入執行
+        // 初次載入
         fetchProductsFromCloud();
     </script>
 </body>
