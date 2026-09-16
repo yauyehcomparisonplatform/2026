@@ -1,354 +1,353 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YAU嘢格價搜尋平台 YAU Yeh Price Comparison Search</title>
-    <!-- 引入 Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --accent-color: #ea580c;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAU嘢格價搜尋平台 YAU Yeh Price Comparison Search</title>
+    <!-- 引入 Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --accent-color: #ea580c;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
-        header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
 
-        h1 {
-            font-size: 24px;
-            color: var(--primary-color);
-            margin-bottom: 8px;
-        }
+        h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
 
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-        input[type="text"] {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
-        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
 
-        input[type="text"]:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-        }
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
 
-        .loading, .empty-state {
-            text-align: center;
-            padding: 40px 0;
-            color: var(--text-muted);
-        }
+        .loading, .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
+        }
 
-        .product-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-        .product-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 16px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
-        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
 
-        .product-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
+        .product-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
 
-        .badge-container {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
+        .badge-container {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
 
-        .badge {
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
+        .badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
 
-        .badge-bulk {
-            background-color: #ffedd5;
-            color: #c2410c;
-            border: 1px solid #fed7aa;
-        }
+        .badge-bulk {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
 
-        .badge-flash {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
+        .badge-flash {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
 
-        .price-section {
-            margin: 12px 0;
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-        }
+        .price-section {
+            margin: 12px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
 
-        .current-price {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
+        .current-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
 
-        .original-price {
-            font-size: 14px;
-            color: var(--text-muted);
-            text-decoration: line-through;
-        }
+        .original-price {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
 
-        /* 動態多件試算區塊 */
-        .calculator-box {
-            background-color: #f1f5f9;
-            padding: 10px 12px;
-            border-radius: 6px;
-            margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-        }
+        /* 動態多件試算區塊 */
+        .calculator-box {
+            background-color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
 
-        .calculator-input {
-            width: 60px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #cbd5e1;
-            text-align: center;
-        }
+        .calculator-input {
+            width: 60px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+        }
 
-        .calc-result {
-            font-weight: 600;
-            color: var(--accent-color);
-        }
+        .calc-result {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
 
-        .store-info {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .store-info {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        .store-link {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-        }
+        .store-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
 
-        .store-link:hover {
-            text-decoration: underline;
-        }
-    </style>
+        .store-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
 
-    <header>
-        <h1>香港即時格價搜尋平台</h1>
-        <p style="color: var(--text-muted); font-size: 14px;">已連結 Supabase 雲端資料庫</p>
-    </header>
+    <header>
+        <h1>香港即時格價搜尋平台</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">已連結 Supabase 雲端資料庫</p>
+    </header>
 
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
-    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
+    </div>
 
-    <div id="loading" class="loading">資料載入中，請稍候...</div>
-    <div id="productList" class="product-list"></div>
+    <div id="loading" class="loading">資料載入中，請稍候...</div>
+    <div id="productList" class="product-list"></div>
 
-    <script>
-        // 1. 初始化 Supabase（請將引號內的字串替換為你自己的 Supabase 憑證）
-        const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    <script>
+        // 1. 初始化 Supabase（請將引號內的字串替換為你自己的 Supabase 憑證）
+        const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let storeDatabase = [];
+        let storeDatabase = [];
 
-        // 2. 從 Supabase 雲端資料庫抓取資料
-        async function fetchProductsFromCloud() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('products')
-                    .select('*');
+        // 2. 從 Supabase 雲端資料庫抓取資料
+        async function fetchProductsFromCloud() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
 
-                if (error) throw error;
+                if (error) throw error;
 
-                // 將 Supabase 平坦欄位映射為 JS 物件格式
-                storeDatabase = data.map(item => ({
-                    id: item.id,
-                    name: { zh: item.name_zh, en: item.name_en },
-                    weight: { zh: item.weight_zh, en: item.weight_en },
-                    price: item.price,
-                    originalPrice: item.original_price,
-                    bulkDiscount: item.min_bulk_qty ? {
-                        minQty: item.min_bulk_qty,
-                        bulkPrice: item.bulk_price
-                    } : null,
-                    store: { zh: item.store_zh, en: item.store_en },
-                    address: { zh: item.address_zh, en: item.address_en },
-                    url: item.url,
-                    isFlashSale: item.is_flash_sale
-                }));
+                // 將 Supabase 平坦欄位映射為 JS 物件格式
+                storeDatabase = data.map(item => ({
+                    id: item.id,
+                    name: { zh: item.name_zh, en: item.name_en },
+                    weight: { zh: item.weight_zh, en: item.weight_en },
+                    price: item.price,
+                    originalPrice: item.original_price,
+                    bulkDiscount: item.min_bulk_qty ? {
+                        minQty: item.min_bulk_qty,
+                        bulkPrice: item.bulk_price
+                    } : null,
+                    store: { zh: item.store_zh, en: item.store_en },
+                    address: { zh: item.address_zh, en: item.address_en },
+                    url: item.url,
+                    isFlashSale: item.is_flash_sale
+                }));
 
-                document.getElementById('loading').style.display = 'none';
-                renderProducts(storeDatabase);
-            } catch (err) {
-                console.error("雲端資料載入失敗：", err.message);
-                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
-            }
-        }
+                document.getElementById('loading').style.display = 'none';
+                renderProducts(storeDatabase);
+            } catch (err) {
+                console.error("雲端資料載入失敗：", err.message);
+                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
+            }
+        }
 
-        // 3. 多件優惠計算邏輯
-        function calculatePrice(product, quantity) {
-            const qty = Math.max(1, parseInt(quantity) || 1);
-            const bulk = product.bulkDiscount;
+        // 3. 多件優惠計算邏輯
+        function calculatePrice(product, quantity) {
+            const qty = Math.max(1, parseInt(quantity) || 1);
+            const bulk = product.bulkDiscount;
 
-            if (bulk && qty >= bulk.minQty) {
-                const total = qty * bulk.bulkPrice;
-                return {
-                    totalPrice: total,
-                    unitPrice: bulk.bulkPrice,
-                    isDiscounted: true
-                };
-            }
+            if (bulk && qty >= bulk.minQty) {
+                const total = qty * bulk.bulkPrice;
+                return {
+                    totalPrice: total,
+                    unitPrice: bulk.bulkPrice,
+                    isDiscounted: true
+                };
+            }
 
-            return {
-                totalPrice: qty * product.price,
-                unitPrice: product.price,
-                isDiscounted: false
-            };
-        }
+            return {
+                totalPrice: qty * product.price,
+                unitPrice: product.price,
+                isDiscounted: false
+            };
+        }
 
-        // 4. 動態更新試算結果
-        function updateCalc(productId) {
-            const product = storeDatabase.find(p => p.id === productId);
-            const qtyInput = document.getElementById(`qty-${productId}`);
-            const resultDisplay = document.getElementById(`res-${productId}`);
+        // 4. 動態更新試算結果
+        function updateCalc(productId) {
+            const product = storeDatabase.find(p => p.id === productId);
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const resultDisplay = document.getElementById(`res-${productId}`);
 
-            if (!product || !qtyInput || !resultDisplay) return;
+            if (!product || !qtyInput || !resultDisplay) return;
 
-            const res = calculatePrice(product, qtyInput.value);
-            resultDisplay.innerHTML = `總計: <strong>$${res.totalPrice}</strong> (平均單價 $${res.unitPrice})`;
-        }
+            const res = calculatePrice(product, qtyInput.value);
+            resultDisplay.innerHTML = `總計: <strong>$${res.totalPrice}</strong> (平均單價 $${res.unitPrice})`;
+        }
 
-        // 5. 渲染商品卡片列表
-        function renderProducts(products) {
-            const container = document.getElementById('productList');
-            
-            if (products.length === 0) {
-                container.innerHTML = `<div class="empty-state">沒有找到相關商品</div>`;
-                return;
-            }
+        // 5. 渲染商品卡片列表
+        function renderProducts(products) {
+            const container = document.getElementById('productList');
+            
+            if (products.length === 0) {
+                container.innerHTML = `<div class="empty-state">沒有找到相關商品</div>`;
+                return;
+            }
 
-            container.innerHTML = products.map(product => {
-                // 標籤判定
-                let badges = '';
-                if (product.isFlashSale) {
-                    badges += `<span class="badge badge-flash">限時優惠</span>`;
-                }
-                if (product.bulkDiscount) {
-                    badges += `<span class="badge badge-bulk">買 ${product.bulkDiscount.minQty} 件以上每件 $${product.bulkDiscount.bulkPrice}</span>`;
-                }
+            container.innerHTML = products.map(product => {
+                // 標籤判定
+                let badges = '';
+                if (product.isFlashSale) {
+                    badges += `<span class="badge badge-flash">限時優惠</span>`;
+                }
+                if (product.bulkDiscount) {
+                    badges += `<span class="badge badge-bulk">買 ${product.bulkDiscount.minQty} 件以上每件 $${product.bulkDiscount.bulkPrice}</span>`;
+                }
 
-                // 試算器區塊
-                const calcBlock = product.bulkDiscount ? `
-                    <div class="calculator-box">
-                        <div>
-                            購買數量: 
-                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
-                        </div>
-                        <div class="calc-result" id="res-${product.id}">
-                            總計: $${product.price}
-                        </div>
-                    </div>
-                ` : '';
+                // 試算器區塊
+                const calcBlock = product.bulkDiscount ? `
+                    <div class="calculator-box">
+                        <div>
+                            購買數量: 
+                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
+                        </div>
+                        <div class="calc-result" id="res-${product.id}">
+                            總計: $${product.price}
+                        </div>
+                    </div>
+                ` : '';
 
-                return `
-                    <div class="product-card">
-                        <div class="card-header">
-                            <div>
-                                <div class="product-title">${product.name.zh}</div>
-                                <div style="font-size: 12px; color: var(--text-muted);">${product.weight.zh}</div>
-                            </div>
-                            <div class="badge-container">${badges}</div>
-                        </div>
+                return `
+                    <div class="product-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${product.name.zh}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">${product.weight.zh}</div>
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
 
-                        <div class="price-section">
-                            <span class="current-price">$${product.price}</span>
-                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
-                        </div>
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
 
-                        ${calcBlock}
+                        ${calcBlock}
 
-                        <div class="store-info">
-                            <span>📍 ${product.store.zh} (${product.address.zh})</span>
-                            <a href="${product.url}" target="_blank" class="store-link">地圖 ↗</a>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+                        <div class="store-info">
+                            <span>📍 ${product.store.zh} (${product.address.zh})</span>
+                            <a href="${product.url}" target="_blank" class="store-link">地圖 ↗</a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-        // 6. 搜尋過濾功能
-        function handleSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            const filtered = storeDatabase.filter(product => {
-                const nameZh = product.name.zh.toLowerCase();
-                const nameEn = product.name.en.toLowerCase();
-                const storeZh = product.store.zh.toLowerCase();
-                const addressZh = product.address.zh.toLowerCase();
+        // 6. 搜尋過濾功能
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
 
-                return nameZh.includes(query) || nameEn.includes(query) || storeZh.includes(query) || addressZh.includes(query);
-            });
+                return nameZh.includes(query) || nameEn.includes(query) || storeZh.includes(query) || addressZh.includes(query);
+            });
 
-            renderProducts(filtered);
-        }
+            renderProducts(filtered);
+        }
 
-        // 頁面初次載入執行
-        fetchProductsFromCloud();
-    </script>
+        // 頁面初次載入執行
+        fetchProductsFromCloud();
+    </script>
 </body>
 </html>
-
