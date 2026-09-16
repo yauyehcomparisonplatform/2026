@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>香港即時格價搜尋平台</title>
     <!-- 引入 Supabase JS SDK -->
-    <script src="https://rcqsjaurzehkoitblvli.supabase.co"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-color: #2563eb;
@@ -199,8 +199,8 @@
 
     <script>
         // 1. 初始化 Supabase（請將引號內的字串替換為你自己的 Supabase 憑證）
-        const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-        const SUPABASE_KEY = 'YOUR_ANON_KEY';
+        const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let storeDatabase = [];
