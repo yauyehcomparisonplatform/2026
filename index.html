@@ -1,405 +1,356 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YAU嘢格價資訊搜尋 YAU Yeh Price Comparison Info Searching</title>
-    <!-- 引入 Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --accent-color: #ea580c;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAU嘢格價搜尋平台 YAU Yeh Price Comparison Search</title>
+    <!-- 引入 Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --accent-color: #ea580c;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 20px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            position: relative;
-        }
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
 
-        .lang-btn {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            color: var(--text-muted);
-        }
+        h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
 
-        h1 {
-            font-size: 22px;
-            line-height: 1.4;
-            color: var(--text-main);
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-        .subtitle {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
 
-        /* Search Bar & Button */
-        .search-container {
-            margin-bottom: 12px;
-        }
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
 
-        .search-box {
-            display: flex;
-            gap: 10px;
-        }
+        .loading, .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
+        }
 
-        input[type="text"] {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            background: #fff;
-        }
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-        input[type="text"]:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-        }
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
 
-        .search-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
 
-        .search-btn:hover {
-            background-color: #1d4ed8;
-        }
+        .product-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
 
-        /* Hot Searches Tags */
-        .hot-searches {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-            font-size: 13px;
-        }
+        .badge-container {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
 
-        .hot-label {
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
+        .badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
 
-        .tag {
-            background-color: #e2e8f0;
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            border: none;
-            transition: background 0.2s;
-        }
+        .badge-bulk {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
 
-        .tag.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
+        .badge-flash {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
 
-        .tag:hover {
-            background-color: #cbd5e1;
-        }
-        .tag.active:hover {
-            background-color: #1d4ed8;
-        }
+        .price-section {
+            margin: 12px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
 
-        /* Table / List layout like photo */
-        .table-container {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
+        .current-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
 
-        .table-header {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1.5fr;
-            padding: 12px 16px;
-            background-color: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 13px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
+        .original-price {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
 
-        .product-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1.5fr;
-            padding: 16px;
-            border-bottom: 1px solid #f1f5f9;
-            align-items: center;
-            gap: 10px;
-        }
+        /* 動態多件試算區塊 */
+        .calculator-box {
+            background-color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
 
-        .product-row:last-child {
-            border-bottom: none;
-        }
+        .calculator-input {
+            width: 60px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+        }
 
-        .row-name-col {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
+        .calc-result {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
 
-        .product-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text-main);
-        }
+        .store-info {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        .badge-container {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
+        .store-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
 
-        .badge {
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .badge-flash {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
-
-        .badge-bulk {
-            background-color: #ffedd5;
-            color: #c2410c;
-            border: 1px solid #fed7aa;
-        }
-
-        .row-spec-col {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .row-price-col {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .price-line {
-            display: flex;
-            align-items: baseline;
-            gap: 6px;
-        }
-
-        .current-price {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .original-price {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-decoration: line-through;
-        }
-
-        .store-subtext {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .loading, .empty-state {
-            text-align: center;
-            padding: 40px 0;
-            color: var(--text-muted);
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-    </style>
+        .store-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
 
-    <header>
-        <button class="lang-btn">English</button>
-        <h1>YAU嘢格價資訊搜尋<br>YAU Yeh Price Comparison Info Searching</h1>
-        <div class="subtitle">即時比較各大商店價格、規格與地址，自動找出最低價優惠</div>
-    </header>
+    <header>
+        <h1>香港即時格價搜尋平台</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">已連結 Supabase 雲端資料庫</p>
+    </header>
 
-    <div class="search-container">
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="兩餸飯" oninput="handleSearch()">
-            <button class="search-btn" onclick="handleSearch()">格價搜尋</button>
-        </div>
-    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
+    </div>
 
-    <!-- 熱門搜尋標籤列 -->
-    <div class="hot-searches">
-        <span class="hot-label">🔥 熱門搜尋：</span>
-        <button class="tag" onclick="setSearchQuery('兩餸飯')">兩餸飯 Rice with 2 Dishes</button>
-        <button class="tag" onclick="setSearchQuery('魚蛋粉')">魚蛋粉 Fish Ball Noodles</button>
-        <button class="tag" onclick="setSearchQuery('iPhone')">iPhone</button>
-    </div>
+    <div id="loading" class="loading">資料載入中，請稍候...</div>
+    <div id="productList" class="product-list"></div>
 
-    <div id="loading" class="loading">資料載入中，請稍候...</div>
-    
-    <div class="table-container" id="tableContainer" style="display: none;">
-        <div class="table-header">
-            <div>商品全名</div>
-            <div>重量 / 規格</div>
-            <div>價格 / 商店</div>
-        </div>
-        <div id="productList"></div>
-    </div>
+    <script>
+        // 1. 初始化 Supabase（請將引號內的字串替換為你自己的 Supabase 憑證）
+        const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    <script>
-        // 1. 初始化 Supabase
-        const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let storeDatabase = [];
 
-        let storeDatabase = [];
+        // 2. 從 Supabase 雲端資料庫抓取資料
+        async function fetchProductsFromCloud() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
 
-        // 2. 從 Supabase 雲端資料庫抓取資料
-        async function fetchProductsFromCloud() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('products')
-                    .select('*');
+                if (error) throw error;
 
-                if (error) throw error;
+                // 將 Supabase 平坦欄位映射為 JS 物件格式
+                storeDatabase = data.map(item => ({
+                    id: item.id,
+                    name: { zh: item.name_zh, en: item.name_en },
+                    weight: { zh: item.weight_zh, en: item.weight_en },
+                    price: item.price,
+                    originalPrice: item.original_price,
+                    bulkDiscount: item.min_bulk_qty ? {
+                        minQty: item.min_bulk_qty,
+                        bulkPrice: item.bulk_price
+                    } : null,
+                    store: { zh: item.store_zh, en: item.store_en },
+                    address: { zh: item.address_zh, en: item.address_en },
+                    url: item.url,
+                    isFlashSale: item.is_flash_sale
+                }));
 
-                storeDatabase = data.map(item => ({
-                    id: item.id,
-                    name: { zh: item.name_zh, en: item.name_en },
-                    weight: { zh: item.weight_zh, en: item.weight_en },
-                    price: item.price,
-                    originalPrice: item.original_price,
-                    bulkDiscount: item.min_bulk_qty ? {
-                        minQty: item.min_bulk_qty,
-                        bulkPrice: item.bulk_price
-                    } : null,
-                    store: { zh: item.store_zh, en: item.store_en },
-                    address: { zh: item.address_zh, en: item.address_en },
-                    url: item.url,
-                    isFlashSale: item.is_flash_sale
-                }));
+                document.getElementById('loading').style.display = 'none';
+                renderProducts(storeDatabase);
+            } catch (err) {
+                console.error("雲端資料載入失敗：", err.message);
+                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
+            }
+        }
 
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('tableContainer').style.display = 'block';
-                renderProducts(storeDatabase);
-            } catch (err) {
-                console.error("雲端資料載入失敗：", err.message);
-                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
-            }
-        }
+        // 3. 多件優惠計算邏輯
+        function calculatePrice(product, quantity) {
+            const qty = Math.max(1, parseInt(quantity) || 1);
+            const bulk = product.bulkDiscount;
 
-        // 點擊熱門搜尋標籤自動填入並過濾
-        function setSearchQuery(keyword) {
-            const input = document.getElementById('searchInput');
-            input.value = keyword;
-            handleSearch();
-        }
+            if (bulk && qty >= bulk.minQty) {
+                const total = qty * bulk.bulkPrice;
+                return {
+                    totalPrice: total,
+                    unitPrice: bulk.bulkPrice,
+                    isDiscounted: true
+                };
+            }
 
-        // 5. 渲染商品表格列表
-        function renderProducts(products) {
-            const container = document.getElementById('productList');
-            
-            if (products.length === 0) {
-                container.innerHTML = `<div class="empty-state" style="border:none; padding: 20px;">沒有找到相關商品</div>`;
-                return;
-            }
+            return {
+                totalPrice: qty * product.price,
+                unitPrice: product.price,
+                isDiscounted: false
+            };
+        }
 
-            container.innerHTML = products.map(product => {
-                let badges = '';
-                if (product.isFlashSale) {
-                    badges += `<span class="badge badge-flash">限時優惠</span>`;
-                }
-                if (product.bulkDiscount) {
-                    badges += `<span class="badge badge-bulk">買 ${product.bulkDiscount.minQty}件起 $${product.bulkDiscount.bulkPrice}</span>`;
-                }
+        // 4. 動態更新試算結果
+        function updateCalc(productId) {
+            const product = storeDatabase.find(p => p.id === productId);
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const resultDisplay = document.getElementById(`res-${productId}`);
 
-                return `
-                    <div class="product-row">
-                        <div class="row-name-col">
-                            <div class="product-title">${product.name.zh}</div>
-                            <div class="badge-container">${badges}</div>
-                        </div>
-                        <div class="row-spec-col">
-                            ${product.weight.zh}
-                        </div>
-                        <div class="row-price-col">
-                            <div class="price-line">
-                                <span class="current-price">$${product.price}</span>
-                                ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
-                            </div>
-                            <div class="store-subtext">📍 ${product.store.zh}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+            if (!product || !qtyInput || !resultDisplay) return;
 
-        // 6. 搜尋過濾功能
-        function handleSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            const filtered = storeDatabase.filter(product => {
-                const nameZh = product.name.zh.toLowerCase();
-                const nameEn = product.name.en.toLowerCase();
-                const storeZh = product.store.zh.toLowerCase();
-                const addressZh = product.address.zh.toLowerCase();
+            const res = calculatePrice(product, qtyInput.value);
+            resultDisplay.innerHTML = `總計: <strong>$${res.totalPrice}</strong> (平均單價 $${res.unitPrice})`;
+        }
 
-                return nameZh.includes(query) || nameEn.includes(query) || storeZh.includes(query) || addressZh.includes(query);
-            });
+        // 5. 渲染商品卡片列表
+        function renderProducts(products) {
+            const container = document.getElementById('productList');
+            
+            if (products.length === 0) {
+                container.innerHTML = `<div class="empty-state">沒有找到相關商品</div>`;
+                return;
+            }
 
-            renderProducts(filtered);
-        }
+            container.innerHTML = products.map(product => {
+                // 標籤判定
+                let badges = '';
+                if (product.isFlashSale) {
+                    badges += `<span class="badge badge-flash">限時優惠</span>`;
+                }
+                if (product.bulkDiscount) {
+                    badges += `<span class="badge badge-bulk">買 ${product.bulkDiscount.minQty} 件以上每件 $${product.bulkDiscount.bulkPrice}</span>`;
+                }
 
-        // 頁面初次載入執行
-        fetchProductsFromCloud();
-    </script>
+                // 試算器區塊
+                const calcBlock = product.bulkDiscount ? `
+                    <div class="calculator-box">
+                        <div>
+                            購買數量: 
+                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
+                        </div>
+                        <div class="calc-result" id="res-${product.id}">
+                            總計: $${product.price}
+                        </div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="product-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${product.name.zh}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">${product.weight.zh}</div>
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
+
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
+
+                        ${calcBlock}
+
+                        <div class="store-info">
+                            <span>📍 ${product.store.zh} (${product.address.zh})</span>
+                            <a href="${product.url}" target="_blank" class="store-link">地圖 ↗</a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 6. 搜尋過濾功能
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+
+                return nameZh.includes(query) || nameEn.includes(query) || storeZh.includes(query) || addressZh.includes(query);
+            });
+
+            renderProducts(filtered);
+        }
+
+        // 頁面初次載入執行
+        fetchProductsFromCloud();
+    </script>
 </body>
 </html>
+
+
+how to make layout be like the photo?
