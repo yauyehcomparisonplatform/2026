@@ -64,7 +64,7 @@
             margin-bottom: 20px;
         }
 
-        /* 搜尋框與按鈕 */
+        /* Search Bar & Button */
         .search-container {
             margin-bottom: 12px;
         }
@@ -105,7 +105,7 @@
             background-color: #1d4ed8;
         }
 
-        /* 熱門搜尋標籤列 */
+        /* Hot Searches Tags */
         .hot-searches {
             display: flex;
             align-items: center;
@@ -133,11 +133,19 @@
             transition: background 0.2s;
         }
 
+        .tag.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
         .tag:hover {
             background-color: #cbd5e1;
         }
+        .tag.active:hover {
+            background-color: #1d4ed8;
+        }
 
-        /* 表格排版 */
+        /* Table / List layout like photo */
         .table-container {
             background: #fff;
             border-radius: 12px;
@@ -262,7 +270,7 @@
 
     <div class="search-container">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="兩餸飯" oninput="handleSearch()">
+            <input type="text" id="searchInput" placeholder="請輸入想格價的商品..." onkeydown="if(event.key==='Enter') handleSearch()">
             <button class="search-btn" onclick="handleSearch()">格價搜尋</button>
         </div>
     </div>
@@ -270,12 +278,12 @@
     <!-- 熱門搜尋標籤列 -->
     <div class="hot-searches">
         <span class="hot-label">🔥 熱門搜尋：</span>
-        <button class="tag" onclick="setSearchQuery('兩餸飯')">兩餸飯</button>
-        <button class="tag" onclick="setSearchQuery('魚蛋粉')">魚蛋粉</button>
+        <button class="tag" onclick="setSearchQuery('兩餸飯')">兩餸飯 Rice with 2 Dishes</button>
+        <button class="tag" onclick="setSearchQuery('魚蛋粉')">魚蛋粉 Fish Ball Noodles</button>
         <button class="tag" onclick="setSearchQuery('iPhone')">iPhone</button>
     </div>
 
-    <div id="loading" class="loading">資料載入中，請稍候...</div>
+    <div id="loading" class="loading" style="display: none;">資料載入中，請稍候...</div>
     
     <div class="table-container" id="tableContainer" style="display: none;">
         <div class="table-header">
@@ -293,8 +301,9 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let storeDatabase = [];
+        let isDataLoaded = false;
 
-        // 2. 從 Supabase 雲端資料庫抓取資料
+        // 2. 從 Supabase 雲端資料庫預先抓取資料（但不直接顯示）
         async function fetchProductsFromCloud() {
             try {
                 const { data, error } = await supabaseClient
@@ -319,23 +328,20 @@
                     isFlashSale: item.is_flash_sale
                 }));
 
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('tableContainer').style.display = 'block';
-                renderProducts(storeDatabase);
+                isDataLoaded = true;
             } catch (err) {
                 console.error("雲端資料載入失敗：", err.message);
-                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
             }
         }
 
         // 點擊熱門搜尋標籤自動填入並過濾
-        function setSearchQuery(keyword) {
+        async function setSearchQuery(keyword) {
             const input = document.getElementById('searchInput');
             input.value = keyword;
-            handleSearch();
+            await handleSearch();
         }
 
-        // 3. 渲染商品表格列表
+        // 5. 渲染商品表格列表
         function renderProducts(products) {
             const container = document.getElementById('productList');
             
@@ -374,9 +380,22 @@
             }).join('');
         }
 
-        // 4. 搜尋過濾功能
-        function handleSearch() {
+        // 6. 搜尋過濾功能（按搜尋時才顯示結果容器）
+        async function handleSearch() {
+            if (!isDataLoaded) {
+                document.getElementById('loading').style.display = 'block';
+                await fetchProductsFromCloud();
+                document.getElementById('loading').style.display = 'none';
+            }
+
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const tableContainer = document.getElementById('tableContainer');
+
+            // 如果沒有輸入任何字眼，則隱藏列表
+            if (!query) {
+                tableContainer.style.display = 'none';
+                return;
+            }
             
             const filtered = storeDatabase.filter(product => {
                 const nameZh = product.name.zh.toLowerCase();
@@ -388,9 +407,10 @@
             });
 
             renderProducts(filtered);
+            tableContainer.style.display = 'block';
         }
 
-        // 頁面初次載入執行
+        // 頁面初次載入時在背景執行抓取，不顯示任何商品
         fetchProductsFromCloud();
     </script>
 </body>
