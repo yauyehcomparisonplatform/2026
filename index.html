@@ -1,553 +1,353 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YAU嘢格價資訊搜尋 YAU Yeh Price Comparison Info Searching</title>
+    <title>香港即時格價搜尋平台</title>
+    <!-- 引入 Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --accent-color: #ea580c;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }
-        body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f4f6f9;
-            color: #333;
-            padding-bottom: 40px;
         }
-        .top-banner {
-            width: 100%;
-            max-height: 350px;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #e2e8f0;
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
         }
-        .top-banner img {
-            width: 100%;
-            height: auto;
-            max-width: 1200px;
-            object-fit: cover;
-            display: block;
-        }
-        .container {
-            max-width: 950px;
-            margin: 20px auto 0 auto;
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            position: relative;
-        }
-        /* 語言切換按鈕 */
-        .lang-switch {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
-        .lang-btn {
-            background-color: #f1f5f9;
-            color: #475569;
-            border: 1px solid #cbd5e1;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .lang-btn:hover {
-            background-color: #0066cc;
-            color: white;
-            border-color: #0066cc;
-        }
-        h1 {
-            font-size: 22px;
-            margin-bottom: 8px;
-            color: #1a1a1a;
+
+        header {
             text-align: center;
-            padding-right: 40px;
-            padding-left: 40px;
-        }
-        p.subtitle {
-            text-align: center;
-            color: #666;
             margin-bottom: 24px;
-            font-size: 14px;
         }
-        .search-container {
+
+        h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .search-box {
             display: flex;
             gap: 10px;
-            margin-bottom: 12px;
+            margin-bottom: 20px;
         }
+
         input[type="text"] {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid #e1e4e8;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 16px;
             outline: none;
-            transition: border-color 0.2s;
         }
+
         input[type="text"]:focus {
-            border-color: #0066cc;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
         }
-        button.search-btn {
-            padding: 12px 24px;
-            background-color: #0066cc;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
+
+        .loading, .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
         }
-        button.search-btn:hover {
-            background-color: #0052a3;
-        }
-        .quick-tags {
+
+        .product-list {
             display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .product-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 6px;
             flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 24px;
-            font-size: 13px;
-            color: #666;
         }
-        .tag-btn {
-            background-color: #edf2f7;
-            color: #2d3748;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 16px;
+
+        .badge {
             font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
         }
-        .tag-btn:hover {
-            background-color: #0066cc;
-            color: white;
+
+        .badge-bulk {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
         }
-        .table-responsive {
-            overflow-x: auto;
+
+        .badge-flash {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            min-width: 800px;
+
+        .price-section {
+            margin: 12px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
         }
-        th, td {
-            padding: 14px 12px;
-            text-align: left;
-            border-bottom: 1px solid #edf2f7;
+
+        .current-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .original-price {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+
+        /* 動態多件試算區塊 */
+        .calculator-box {
+            background-color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 14px;
         }
-        th {
-            background-color: #f8fafc;
-            color: #4a5568;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        tr:hover {
-            background-color: #f8fafc;
-        }
-        tr.best-price {
-            background-color: #f0fdf4;
-        }
-        tr.flash-sale-row {
-            background-color: #fff5f5;
-        }
-        .price {
-            font-weight: bold;
-            color: #1a202c;
-            font-size: 15px;
-            white-space: nowrap;
-        }
-        .original-price {
-            text-decoration: line-through;
-            color: #a0aec0;
-            font-size: 12px;
-            margin-right: 4px;
-            font-weight: normal;
-        }
-        .unit-price {
-            display: block;
-            font-size: 11px;
-            color: #718096;
-            font-weight: normal;
-        }
-        .countdown-timer {
-            display: block;
-            font-size: 11px;
-            color: #e53e3e;
-            font-weight: bold;
-            margin-top: 2px;
-        }
-        .tag-lowest {
-            display: inline-block;
-            background-color: #22c55e;
-            color: white;
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 12px;
-            margin-left: 4px;
-            font-weight: normal;
-        }
-        .tag-flash {
-            display: inline-block;
-            background-color: #e53e3e;
-            color: white;
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 12px;
-            margin-left: 4px;
-            font-weight: normal;
-        }
-        .address-link {
-            color: #2b6cb0;
-            text-decoration: none;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .address-link:hover {
-            text-decoration: underline;
-            color: #0066cc;
-        }
-        .weight {
-            color: #4a5568;
-            white-space: nowrap;
-        }
-        .buy-btn {
-            display: inline-block;
-            padding: 6px 12px;
-            background-color: #edf2f7;
-            color: #2d3748;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 13px;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        .buy-btn:hover {
-            background-color: #e2e8f0;
-            color: #1a202c;
-        }
-        .no-result {
+
+        .calculator-input {
+            width: 60px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
             text-align: center;
-            color: #a0aec0;
-            padding: 30px 0;
+        }
+
+        .calc-result {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .store-info {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .store-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .store-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
-<div class="top-banner">
-    <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png" alt="YAU嘢格價平台 Banner">
-</div>
+    <header>
+        <h1>香港即時格價搜尋平台</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">已連結 Supabase 雲端資料庫</p>
+    </header>
 
-<div class="container">
-    <!-- 切換語言按鈕 -->
-    <div class="lang-switch">
-        <button class="lang-btn" onclick="toggleLanguage()" id="langToggleBtn">English</button>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
     </div>
 
-    <h1>YAU嘢格價資訊搜尋 YAU Yeh Price Comparison Info Searching</h1>
-    <p class="subtitle" id="uiSubtitle">即時比較各大商店價格、規格與地址，自動找出最低價優惠</p>
-    
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="輸入商品關鍵字（如：兩餸飯, 魚蛋粉, iPhone...）" onkeypress="handleKeyPress(event)">
-        <button class="search-btn" onclick="performSearch()" id="uiSearchBtn">格價搜尋</button>
-    </div>
+    <div id="loading" class="loading">資料載入中，請稍候...</div>
+    <div id="productList" class="product-list"></div>
 
-    <div class="quick-tags">
-        <span id="uiHotSearch">🔥 熱門搜尋：</span>
-        <button class="tag-btn" onclick="quickSearch('兩餸飯')">兩餸飯 Rice with 2 Dishes</button>
-        <button class="tag-btn" onclick="quickSearch('魚蛋粉')">魚蛋粉 Fish Ball Noodles</button>
-        <button class="tag-btn" onclick="quickSearch('iPhone')">iPhone</button>
-    </div>
+    <script>
+        // 1. 初始化 Supabase（請將引號內的字串替換為你自己的 Supabase 憑證）
+        const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+        const SUPABASE_KEY = 'YOUR_ANON_KEY';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    <div class="table-responsive">
-        <div id="resultArea">
-            <p class="no-result" id="uiInitialPrompt">請在上方輸入框輸入關鍵字開始搜尋。</p>
-        </div>
-    </div>
-</div>
+        let storeDatabase = [];
 
-<script>
-    // 當前語言 (zh: 中文, en: 英文)
-    let currentLang = 'zh';
+        // 2. 從 Supabase 雲端資料庫抓取資料
+        async function fetchProductsFromCloud() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
 
-    // UI 詞彙翻譯字典
-    const i18n = {
-        zh: {
-            subtitle: "即時比較各大商店價格、規格與地址，自動找出最低價優惠",
-            placeholder: "輸入商品關鍵字（如：兩餸飯, 魚蛋粉, iPhone...）",
-            searchBtn: "格價搜尋",
-            hotSearch: "🔥 熱門搜尋：",
-            initialPrompt: "請在上方輸入框輸入關鍵字開始搜尋。",
-            noResult: "未有找到相關商品的價格資訊。",
-            inputPrompt: "請先輸入關鍵字。",
-            colName: "商品全名",
-            colWeight: "重量 / 規格",
-            colPrice: "價格 (HKD)",
-            colStore: "商店",
-            colAddress: "門市地址 (點擊開啟地圖)",
-            colLink: "連結",
-            onlineStore: "網上商店",
-            buyBtn: "前往連結",
-            lowestTag: "最低價",
-            flashTag: "限時優惠",
-            unitWord: "單位",
-            approx: "約",
-            timeEnded: "⏰ 優惠已結束",
-            leftTime: "⏰ 剩餘 "
-        },
-        en: {
-            subtitle: "Compare prices, specs, and store addresses to find the best deals automatically.",
-            placeholder: "Enter keywords (e.g. 2 dishes, Fish Ball Noodles, iPhone...)",
-            searchBtn: "Search",
-            hotSearch: "🔥 Popular Searches:",
-            initialPrompt: "Please enter keywords above to start searching.",
-            noResult: "No price comparison results found.",
-            inputPrompt: "Please enter a keyword first.",
-            colName: "Product Name",
-            colWeight: "Weight / Spec",
-            colPrice: "Price (HKD)",
-            colStore: "Store",
-            colAddress: "Store Address (Click for Map)",
-            colLink: "Link",
-            onlineStore: "Online Store",
-            buyBtn: "Visit Site",
-            lowestTag: "Lowest",
-            flashTag: "Flash Sale",
-            unitWord: "unit",
-            approx: "approx.",
-            timeEnded: "⏰ Deal Ended",
-            leftTime: "⏰ "
-        }
-    };
+                if (error) throw error;
 
-    // 雙語商品資料庫
-    const storeDatabase = [
-        { 
-            name: { zh: "魚蛋粉麵", en: "Fish Ball Noodles" },
-            weight: { zh: "1 碗", en: "1 bowl" },
-            price: 25, 
-            store: { zh: "潮成園", en: "Chiu Shing Yuen" },
-            address: { zh: "旺角上海街491號", en: "491 Shanghai St, Mong Kok, Kowloon" },
-            url: "https://maps.app.goo.gl/SWgDG2CvGiCyqNfE7" 
-        },
-        { 
-            name: { zh: "兩餸飯 (午市限時優惠)", en: "Rice with 2 Dishes (Lunch Offer)" },
-            weight: { zh: "2 餸", en: "2 dishes" },
-            price: 22, 
-            originalPrice: 28,
-            store: { zh: "港佳美食", en: "Kong Ka Restaurant" },
-            address: { zh: "九龍旺角上海街523號", en: "523 Shanghai St, Mong Kok, Kowloon" },
-            url: "https://maps.app.goo.gl/Cq9nRPX7BEKWU83H6",
-            isFlashSale: true,
-            expireDate: "2026-10-31 23:59:59"
-        },
-        { 
-            name: { zh: "兩餸飯", en: "Rice with 2 Dishes" },
-            weight: { zh: "2 餸", en: "2 dishes" },
-            price: 30, 
-            store: { zh: "雄記小廚", en: "Hung Kee Kitchen" },
-            address: { zh: "油麻地砵蘭街65號", en: "65 Portland St, Yau Ma Tei, Kowloon" },
-            url: "https://maps.app.goo.gl/VJ1dBHpomLs1LWR79" 
-        },
-        { 
-            name: { zh: "Apple iPhone 15 128GB", en: "Apple iPhone 15 128GB" },
-            weight: { zh: "171 克 (g)", en: "171 g" },
-            price: 6599, 
-            store: { zh: "豐澤 Fortress", en: "Fortress" },
-            address: { zh: "九龍塘達之路80號又一城MTR層01號舖", en: "Shop 01, MTR Level, Festival Walk, Kowloon Tong" },
-            url: "https://www.fortress.com.hk" 
-        },
-        { 
-            name: { zh: "特別好忌廉粟米蓉(+$1多一件)", en: "S&W Premium Cream Style Corn（buy second for$1" },
-            weight: { zh: "425*2 克 (g)", en: "425*2 g" },
-            price: 12, 
-            originalPrice: 22,
-            store: { zh: "百佳超級市場", en: "PARKnSHOP Supermarket" },
-            address: { zh: "九龍油麻地彌敦道573號富運商業中心入口及地庫地面", en: "Fu Yun Commercial Centre, 573 Nathan Road, Mong Kok " },
-            url: "",
-            isFlashSale: true,
-            expireDate: "2026-09-14 23:59:59"
-        }
-    ];
+                // 將 Supabase 平坦欄位映射為 JS 物件格式
+                storeDatabase = data.map(item => ({
+                    id: item.id,
+                    name: { zh: item.name_zh, en: item.name_en },
+                    weight: { zh: item.weight_zh, en: item.weight_en },
+                    price: item.price,
+                    originalPrice: item.original_price,
+                    bulkDiscount: item.min_bulk_qty ? {
+                        minQty: item.min_bulk_qty,
+                        bulkPrice: item.bulk_price
+                    } : null,
+                    store: { zh: item.store_zh, en: item.store_en },
+                    address: { zh: item.address_zh, en: item.address_en },
+                    url: item.url,
+                    isFlashSale: item.is_flash_sale
+                }));
 
-    let timerInterval = null;
-
-    // 切換中英文語言
-    function toggleLanguage() {
-        currentLang = currentLang === 'zh' ? 'en' : 'zh';
-        const langBtn = document.getElementById('langToggleBtn');
-        langBtn.innerText = currentLang === 'zh' ? 'English' : '繁體中文';
-
-        // 更新介面固定文字
-        document.getElementById('uiSubtitle').innerText = i18n[currentLang].subtitle;
-        document.getElementById('searchInput').placeholder = i18n[currentLang].placeholder;
-        document.getElementById('uiSearchBtn').innerText = i18n[currentLang].searchBtn;
-        document.getElementById('uiHotSearch').innerText = i18n[currentLang].hotSearch;
-
-        // 如果目前有搜尋結果，重新印出畫面
-        const searchInputVal = document.getElementById('searchInput').value.trim();
-        if (searchInputVal) {
-            performSearch();
-        } else {
-            document.getElementById('resultArea').innerHTML = `<p class="no-result">${i18n[currentLang].initialPrompt}</p>`;
-        }
-    }
-
-    function quickSearch(keyword) {
-        document.getElementById('searchInput').value = keyword;
-        performSearch();
-    }
-
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            performSearch();
-        }
-    }
-
-    function calculateUnitPrice(price, weightStr) {
-        if (!weightStr) return '';
-        const match = weightStr.match(/(\d+(\.\d+)?)/);
-        if (match) {
-            const num = parseFloat(match[0]);
-            if (num > 0) {
-                const unitPrice = (price / num).toFixed(1);
-                const unitName = weightStr.replace(/[\d\.\s]/g, '') || i18n[currentLang].unitWord;
-                return `(${i18n[currentLang].approx} HK$${unitPrice} / ${unitName})`;
+                document.getElementById('loading').style.display = 'none';
+                renderProducts(storeDatabase);
+            } catch (err) {
+                console.error("雲端資料載入失敗：", err.message);
+                document.getElementById('loading').innerText = "資料載入失敗，請檢查 Supabase 連線設定。";
             }
         }
-        return '';
-    }
 
-    function updateTimers() {
-        const timerElements = document.querySelectorAll('.countdown-timer');
-        const now = new Date().getTime();
+        // 3. 多件優惠計算邏輯
+        function calculatePrice(product, quantity) {
+            const qty = Math.max(1, parseInt(quantity) || 1);
+            const bulk = product.bulkDiscount;
 
-        timerElements.forEach(el => {
-            const expireTime = new Date(el.dataset.expire).getTime();
-            const distance = expireTime - now;
-
-            if (distance < 0) {
-                el.innerHTML = i18n[currentLang].timeEnded;
-                el.style.color = '#a0aec0';
-            } else {
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                let timeStr = i18n[currentLang].leftTime;
-                if (days > 0) timeStr += currentLang === 'zh' ? `${days}天 ` : `${days}d `;
-                timeStr += currentLang === 'zh' ? `${hours}時${minutes}分${seconds}秒` : `${hours}h ${minutes}m ${seconds}s left`;
-                el.innerHTML = timeStr;
+            if (bulk && qty >= bulk.minQty) {
+                const total = qty * bulk.bulkPrice;
+                return {
+                    totalPrice: total,
+                    unitPrice: bulk.bulkPrice,
+                    isDiscounted: true
+                };
             }
-        });
-    }
 
-    function performSearch() {
-        if (timerInterval) clearInterval(timerInterval);
-
-        const query = document.getElementById('searchInput').value.trim().toLowerCase();
-        const resultArea = document.getElementById('resultArea');
-
-        if (!query) {
-            resultArea.innerHTML = `<p class="no-result">${i18n[currentLang].inputPrompt}</p>`;
-            return;
+            return {
+                totalPrice: qty * product.price,
+                unitPrice: product.price,
+                isDiscounted: false
+            };
         }
 
-        // 搜尋過濾：同時比對中文與英文名稱、商店名、規格
-        const filtered = storeDatabase.filter(item => {
-            const nameZh = (item.name.zh || '').toLowerCase();
-            const nameEn = (item.name.en || '').toLowerCase();
-            const storeZh = (item.store.zh || '').toLowerCase();
-            const storeEn = (item.store.en || '').toLowerCase();
-            const weightZh = (item.weight.zh || '').toLowerCase();
-            const weightEn = (item.weight.en || '').toLowerCase();
+        // 4. 動態更新試算結果
+        function updateCalc(productId) {
+            const product = storeDatabase.find(p => p.id === productId);
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const resultDisplay = document.getElementById(`res-${productId}`);
 
-            return nameZh.includes(query) || nameEn.includes(query) ||
-                   storeZh.includes(query) || storeEn.includes(query) ||
-                   weightZh.includes(query) || weightEn.includes(query);
-        });
+            if (!product || !qtyInput || !resultDisplay) return;
 
-        if (filtered.length === 0) {
-            resultArea.innerHTML = `<p class="no-result">${i18n[currentLang].noResult}</p>`;
-            return;
+            const res = calculatePrice(product, qtyInput.value);
+            resultDisplay.innerHTML = `總計: <strong>$${res.totalPrice}</strong> (平均單價 $${res.unitPrice})`;
         }
 
-        filtered.sort((a, b) => a.price - b.price);
-
-        const t = i18n[currentLang];
-
-        let tableHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>${t.colName}</th>
-                        <th>${t.colWeight}</th>
-                        <th>${t.colPrice}</th>
-                        <th>${t.colStore}</th>
-                        <th>${t.colAddress}</th>
-                        <th>${t.colLink}</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        filtered.forEach((item, index) => {
-            const isLowest = index === 0;
+        // 5. 渲染商品卡片列表
+        function renderProducts(products) {
+            const container = document.getElementById('productList');
             
-            // 抓取當前語言對應的文字
-            const nameText = item.name[currentLang] || item.name.zh;
-            const weightText = item.weight[currentLang] || item.weight.zh;
-            const storeText = item.store[currentLang] || item.store.zh;
-            const addressText = item.address ? (item.address[currentLang] || item.address.zh) : '';
+            if (products.length === 0) {
+                container.innerHTML = `<div class="empty-state">沒有找到相關商品</div>`;
+                return;
+            }
 
-            const unitPriceText = calculateUnitPrice(item.price, weightText);
-            const mapUrl = addressText ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}` : '#';
+            container.innerHTML = products.map(product => {
+                // 標籤判定
+                let badges = '';
+                if (product.isFlashSale) {
+                    badges += `<span class="badge badge-flash">限時優惠</span>`;
+                }
+                if (product.bulkDiscount) {
+                    badges += `<span class="badge badge-bulk">買 ${product.bulkDiscount.minQty} 件以上每件 $${product.bulkDiscount.bulkPrice}</span>`;
+                }
 
-            let rowClass = isLowest ? 'best-price' : '';
-            if (item.isFlashSale) rowClass += ' flash-sale-row';
+                // 試算器區塊
+                const calcBlock = product.bulkDiscount ? `
+                    <div class="calculator-box">
+                        <div>
+                            購買數量: 
+                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
+                        </div>
+                        <div class="calc-result" id="res-${product.id}">
+                            總計: $${product.price}
+                        </div>
+                    </div>
+                ` : '';
 
-            tableHTML += `
-                <tr class="${rowClass}">
-                    <td>
-                        ${nameText}
-                        ${item.isFlashSale ? `<span class="tag-flash">${t.flashTag}</span>` : ''}
-                    </td>
-                    <td class="weight">${weightText || '-'}</td>
-                    <td class="price">
-                        ${item.originalPrice ? `<span class="original-price">$${item.originalPrice.toLocaleString()}</span>` : ''}
-                        $${item.price.toLocaleString()}
-                        ${isLowest ? `<span class="tag-lowest">${t.lowestTag}</span>` : ''}
-                        ${unitPriceText ? `<span class="unit-price">${unitPriceText}</span>` : ''}
-                        ${item.isFlashSale && item.expireDate ? `<span class="countdown-timer" data-expire="${item.expireDate}">...</span>` : ''}
-                    </td>
-                    <td><strong>${storeText}</strong></td>
-                    <td>
-                        ${addressText ? `<a href="${mapUrl}" target="_blank" class="address-link">📍 ${addressText}</a>` : t.onlineStore}
-                    </td>
-                    <td><a href="${item.url}" target="_blank" class="buy-btn">${t.buyBtn}</a></td>
-                </tr>
-            `;
-        });
+                return `
+                    <div class="product-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${product.name.zh}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">${product.weight.zh}</div>
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
 
-        tableHTML += '</tbody></table>';
-        resultArea.innerHTML = tableHTML;
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
 
-        updateTimers();
-        timerInterval = setInterval(updateTimers, 1000);
-    }
-</script>
+                        ${calcBlock}
 
+                        <div class="store-info">
+                            <span>📍 ${product.store.zh} (${product.address.zh})</span>
+                            <a href="${product.url}" target="_blank" class="store-link">地圖 ↗</a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 6. 搜尋過濾功能
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+
+                return nameZh.includes(query) || nameEn.includes(query) || storeZh.includes(query) || addressZh.includes(query);
+            });
+
+            renderProducts(filtered);
+        }
+
+        // 頁面初次載入執行
+        fetchProductsFromCloud();
+    </script>
 </body>
 </html>
