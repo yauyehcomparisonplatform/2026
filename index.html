@@ -260,6 +260,13 @@
             }
         };
 
+        // 【新增】自動生成 Google 地圖搜尋 URL 函式
+        function getGoogleMapUrl(store, address) {
+            const query = [store, address].filter(Boolean).join(' ');
+            if (!query) return null;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+        }
+
         // 3. 切換語言函式
         function toggleLanguage() {
             currentLang = currentLang === 'zh' ? 'en' : 'zh';
@@ -286,7 +293,7 @@
 
                 if (error) throw error;
 
-                // 映射資料並提供雙語 fallback（若英文未填則顯示中文）
+                // 映射資料並提供雙語 fallback
                 storeDatabase = data.map(item => ({
                     id: item.id,
                     name: { 
@@ -374,6 +381,12 @@
                 const store = product.store[currentLang];
                 const address = product.address[currentLang];
 
+                // 【核心修改】：判斷地圖連結邏輯
+                // 若資料庫有填寫自訂網址（url）則優先使用，否則自動根據「商店名稱 + 地址」生成 Google Maps 連結
+                const mapUrl = (product.url && product.url !== '#') 
+                    ? product.url 
+                    : getGoogleMapUrl(store, address);
+
                 // 標籤判定
                 let badges = '';
                 if (product.isFlashSale) {
@@ -415,14 +428,14 @@
 
                         <div class="store-info">
                             <span>📍 ${store} ${address ? `(${address})` : ''}</span>
-                            ${product.url && product.url !== '#' ? `<a href="${product.url}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // 8. 搜尋過濾功能（同時支援中英文關鍵字搜尋）
+        // 8. 搜尋過濾功能
         function handleSearch() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             
