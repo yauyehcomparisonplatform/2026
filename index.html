@@ -80,23 +80,15 @@
             color: #ffffff;
         }
 
-        /* 搜尋與控制區域 */
-        .search-container {
+        .search-box {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 16px;
         }
 
-        .search-box-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
         input[type="text"] {
-            width: 100%;
-            padding: 12px 40px 12px 16px;
+            flex: 1;
+            padding: 12px 16px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 16px;
@@ -106,66 +98,6 @@
         input[type="text"]:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-        }
-
-        .clear-btn {
-            position: absolute;
-            right: 12px;
-            background: none;
-            border: none;
-            font-size: 18px;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: none;
-        }
-
-        /* 篩選與排序面板 */
-        .controls-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .filter-tags {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .filter-tag {
-            background-color: #e2e8f0;
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-        }
-
-        .filter-tag.active {
-            background-color: var(--primary-color);
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .sort-select {
-            padding: 6px 10px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            background-color: #ffffff;
-            font-size: 13px;
-            color: var(--text-main);
-            outline: none;
-        }
-
-        .search-stats {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            display: none;
         }
 
         .lowest-summary {
@@ -334,28 +266,10 @@
         <button class="lang-btn" id="langBtn" onclick="toggleLanguage()">English</button>
     </header>
 
-    <div class="search-container">
-        <div class="search-box-wrapper">
-            <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearchInput()">
-            <button class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</button>
-        </div>
-
-        <div class="controls-panel">
-            <div class="filter-tags">
-                <button class="filter-tag active" id="filter-all" onclick="setFilter('all')">全部</button>
-                <button class="filter-tag" id="filter-lowest" onclick="setFilter('lowest')">🔥 最低價</button>
-                <button class="filter-tag" id="filter-flash" onclick="setFilter('flash')">⚡ 限時優惠</button>
-                <button class="filter-tag" id="filter-bulk" onclick="setFilter('bulk')">📦 多買多平</button>
-            </div>
-            <select class="sort-select" id="sortSelect" onchange="handleSearch()">
-                <option value="price-asc">價格：由低至高</option>
-                <option value="price-desc">價格：由高至低</option>
-                <option value="default">預設排序</option>
-            </select>
-        </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜尋商品名稱、商店名稱（如：兩餸飯、旺角）..." oninput="handleSearch()">
     </div>
 
-    <div id="searchStats" class="search-stats"></div>
     <div id="lowestSummary" class="lowest-summary" style="display: none;"></div>
 
     <div id="loading" class="loading">資料載入中，請稍候...</div>
@@ -368,18 +282,6 @@
 
         let storeDatabase = [];
         let currentLang = 'zh';
-        let currentFilter = 'all';
-        let debounceTimer = null;
-
-        // 同義詞 / 近義詞與錯別字自動配對映射庫
-        const synonymMap = {
-            "兩餸": ["兩送", "兩菜", "三餸", "三送", "兩餸飯", "便當", "飯盒"],
-            "旺角": ["mk", "mongkok", "mong kok"],
-            "油麻地": ["ymt", "yau ma tei"],
-            "尖沙咀": ["tst", "tsim sha tsui"],
-            "太子": ["prince edward"],
-            "佐敦": ["jordan"]
-        };
 
         const translations = {
             zh: {
@@ -389,7 +291,7 @@
                 loading: "資料載入中，請稍候...",
                 loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
                 initialPrompt: "🔍 請在上方搜尋框輸入關鍵字開始比價",
-                emptyState: "沒有找到相關商品，請嘗試其他關鍵字",
+                emptyState: "沒有找到相關商品",
                 lowestPriceBadge: "🔥 最低價",
                 lowestSummaryText: (min) => `🏷️ 目前搜尋結果最低價為：<strong>$${min}</strong>`,
                 flashSale: "限時優惠",
@@ -397,15 +299,7 @@
                 buyQty: "購買數量:",
                 totalPrice: (total, unit) => `總計: <strong>$${total}</strong> (平均單價 $${unit})`,
                 mapLink: "地圖 ↗",
-                langBtn: "English",
-                filterAll: "全部",
-                filterLowest: "🔥 最低價",
-                filterFlash: "⚡ 限時優惠",
-                filterBulk: "📦 多買多平",
-                sortPriceAsc: "價格：由低至高",
-                sortPriceDesc: "價格：由高至低",
-                sortDefault: "預設排序",
-                statsText: (count) => `共找到 <strong>${count}</strong> 個相關商品`
+                langBtn: "English"
             },
             en: {
                 title: "YAU Yeh Price Comparison Platform",
@@ -414,7 +308,7 @@
                 loading: "Loading data, please wait...",
                 loadError: "Failed to load data. Please check Supabase setup.",
                 initialPrompt: "🔍 Type a keyword in the search bar above to compare prices",
-                emptyState: "No products found. Try different keywords.",
+                emptyState: "No products found",
                 lowestPriceBadge: "🔥 Lowest Price",
                 lowestSummaryText: (min) => `🏷️ Lowest price in current results: <strong>$${min}</strong>`,
                 flashSale: "Flash Sale",
@@ -422,15 +316,7 @@
                 buyQty: "Qty:",
                 totalPrice: (total, unit) => `Total: <strong>$${total}</strong> ($${unit}/unit)`,
                 mapLink: "Map ↗",
-                langBtn: "繁體中文",
-                filterAll: "All",
-                filterLowest: "🔥 Lowest Price",
-                filterFlash: "⚡ Flash Sale",
-                filterBulk: "📦 Bulk Discount",
-                sortPriceAsc: "Price: Low to High",
-                sortPriceDesc: "Price: High to Low",
-                sortDefault: "Default Sort",
-                statsText: (count) => `Found <strong>${count}</strong> related item(s)`
+                langBtn: "繁體中文"
             }
         };
 
@@ -449,16 +335,6 @@
             document.getElementById('siteSubtitle').innerText = t.subtitle;
             document.getElementById('searchInput').placeholder = t.searchPlaceholder;
             document.getElementById('langBtn').innerText = t.langBtn;
-
-            document.getElementById('filter-all').innerText = t.filterAll;
-            document.getElementById('filter-lowest').innerText = t.filterLowest;
-            document.getElementById('filter-flash').innerText = t.filterFlash;
-            document.getElementById('filter-bulk').innerText = t.filterBulk;
-
-            const sortSelect = document.getElementById('sortSelect');
-            sortSelect.options[0].text = t.sortPriceAsc;
-            sortSelect.options[1].text = t.sortPriceDesc;
-            sortSelect.options[2].text = t.sortDefault;
 
             handleSearch();
         }
@@ -482,11 +358,11 @@
                         zh: item.weight_zh || '', 
                         en: item.weight_en || item.weight_zh || '' 
                     },
-                    price: parseFloat(item.price) || 0,
-                    originalPrice: item.original_price ? parseFloat(item.original_price) : null,
+                    price: item.price || 0,
+                    originalPrice: item.original_price || null,
                     bulkDiscount: item.min_bulk_qty ? {
-                        minQty: parseInt(item.min_bulk_qty),
-                        bulkPrice: parseFloat(item.bulk_price)
+                        minQty: item.min_bulk_qty,
+                        bulkPrice: item.bulk_price
                     } : null,
                     store: { 
                         zh: item.store_zh || '', 
@@ -506,30 +382,6 @@
                 console.error("Cloud data load error:", err.message);
                 document.getElementById('loading').innerText = t.loadError;
             }
-        }
-
-        function setFilter(filterType) {
-            currentFilter = filterType;
-            document.querySelectorAll('.filter-tag').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`filter-${filterType}`).classList.add('active');
-            handleSearch();
-        }
-
-        function handleSearchInput() {
-            const clearBtn = document.getElementById('clearBtn');
-            clearBtn.style.display = document.getElementById('searchInput').value ? 'block' : 'none';
-
-            // 防抖機制：停止打字 200ms 後才執行搜尋，提升效能
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                handleSearch();
-            }, 200);
-        }
-
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('clearBtn').style.display = 'none';
-            handleSearch();
         }
 
         function calculatePrice(product, quantity) {
@@ -568,18 +420,13 @@
         function renderProducts(products) {
             const container = document.getElementById('productList');
             const summaryBox = document.getElementById('lowestSummary');
-            const statsBox = document.getElementById('searchStats');
             const t = translations[currentLang];
             
             if (products.length === 0) {
                 container.innerHTML = `<div class="empty-state">${t.emptyState}</div>`;
                 summaryBox.style.display = 'none';
-                statsBox.style.display = 'none';
                 return;
             }
-
-            statsBox.style.display = 'block';
-            statsBox.innerHTML = t.statsText(products.length);
 
             const minPrice = Math.min(...products.map(p => p.price));
 
@@ -588,4 +435,94 @@
 
             container.innerHTML = products.map(product => {
                 const name = product.name[currentLang];
-                const
+                const weight = product.weight[currentLang];
+                const store = product.store[currentLang];
+                const address = product.address[currentLang];
+
+                const isLowest = product.price === minPrice;
+
+                const mapUrl = (product.url && product.url !== '#') 
+                    ? product.url 
+                    : getGoogleMapUrl(store, address);
+
+                let badges = '';
+                if (isLowest) {
+                    badges += `<span class="badge badge-lowest">${t.lowestPriceBadge}</span>`;
+                }
+                if (product.isFlashSale) {
+                    badges += `<span class="badge badge-flash">${t.flashSale}</span>`;
+                }
+                if (product.bulkDiscount) {
+                    badges += `<span class="badge badge-bulk">${t.bulkDiscount(product.bulkDiscount.minQty, product.bulkDiscount.bulkPrice)}</span>`;
+                }
+
+                const calcBlock = product.bulkDiscount ? `
+                    <div class="calculator-box">
+                        <div>
+                            ${t.buyQty} 
+                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
+                        </div>
+                        <div class="calc-result" id="res-${product.id}">
+                            ${t.totalPrice(product.price, product.price)}
+                        </div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="product-card ${isLowest ? 'is-lowest' : ''}">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${name}</div>
+                                ${weight ? `<div style="font-size: 12px; color: var(--text-muted);">${weight}</div>` : ''}
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
+
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
+
+                        ${calcBlock}
+
+                        <div class="store-info">
+                            <span>📍 ${store} ${address ? `(${address})` : ''}</span>
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
+            const t = translations[currentLang];
+
+            if (!query) {
+                container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
+                summaryBox.style.display = 'none';
+                return;
+            }
+            
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const storeEn = product.store.en.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+                const addressEn = product.address.en.toLowerCase();
+
+                return nameZh.includes(query) || nameEn.includes(query) || 
+                       storeZh.includes(query) || storeEn.includes(query) || 
+                       addressZh.includes(query) || addressEn.includes(query);
+            });
+
+            renderProducts(filtered);
+        }
+
+        fetchProductsFromCloud();
+    </script>
+</body>
+</html>
