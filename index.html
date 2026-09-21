@@ -283,6 +283,18 @@
         let storeDatabase = [];
         let currentLang = 'zh';
 
+        // 💡 同義詞與關聯字映射表 (同組內的詞語會相互觸發搜尋)
+        const synonymGroups = [
+            ["雞翼", "雞中翼", "雞翅", "雞錘", "翅榜", "wing", "wings"],
+            ["豬扒", "豬排", "pork chop"],
+            ["牛扒", "牛排", "beef steak"],
+            ["雞扒", "雞排", "chicken steak"],
+            ["兩餸飯", "雙餸飯", "兩菜飯", "2 dishes"],
+            ["三餸飯", "三菜飯", "3 dishes"],
+            ["可樂", "可口可樂", "cola", "coke"],
+            ["紙巾", "卷紙", "抽紙", "衛生紙", "tissue"]
+        ];
+
         const translations = {
             zh: {
                 title: "YAU嘢格價搜尋平台",
@@ -494,18 +506,36 @@
             }).join('');
         }
 
+        // 💡 取得關鍵字的所有擴充同義詞
+        function getExpandedKeywords(query) {
+            const keywords = new Set([query]);
+            
+            synonymGroups.forEach(group => {
+                // 如果輸入的搜尋詞包含同義詞組中的任何一個字眼
+                const match = group.some(term => query.includes(term.toLowerCase()) || term.toLowerCase().includes(query));
+                if (match) {
+                    group.forEach(term => keywords.add(term.toLowerCase()));
+                }
+            });
+
+            return Array.from(keywords);
+        }
+
         function handleSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
             const container = document.getElementById('productList');
             const summaryBox = document.getElementById('lowestSummary');
             const t = translations[currentLang];
 
-            if (!query) {
+            if (!rawQuery) {
                 container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
                 summaryBox.style.display = 'none';
                 return;
             }
             
+            // 取得包含擴充同義詞的關鍵字陣列 (例如搜尋 "雞翼" -> ["雞翼", "雞中翼", "雞翅", "wings", ...])
+            const searchTerms = getExpandedKeywords(rawQuery);
+
             const filtered = storeDatabase.filter(product => {
                 const nameZh = product.name.zh.toLowerCase();
                 const nameEn = product.name.en.toLowerCase();
@@ -514,9 +544,12 @@
                 const addressZh = product.address.zh.toLowerCase();
                 const addressEn = product.address.en.toLowerCase();
 
-                return nameZh.includes(query) || nameEn.includes(query) || 
-                       storeZh.includes(query) || storeEn.includes(query) || 
-                       addressZh.includes(query) || addressEn.includes(query);
+                // 只要商品名稱、店名或地址命中任何一個擴充關鍵字即算搜尋成功
+                return searchTerms.some(term => 
+                    nameZh.includes(term) || nameEn.includes(term) || 
+                    storeZh.includes(term) || storeEn.includes(term) || 
+                    addressZh.includes(term) || addressEn.includes(term)
+                );
             });
 
             renderProducts(filtered);
