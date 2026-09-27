@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YAU嘢格價搜尋平台 YAU Yeh Price Comparison Platform</title>
-
     <!-- 引入 Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -188,12 +187,6 @@
         .price-section {
             margin: 12px 0;
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .single-price-row {
-            display: flex;
             align-items: baseline;
             gap: 8px;
         }
@@ -212,18 +205,6 @@
             font-size: 14px;
             color: var(--text-muted);
             text-decoration: line-through;
-        }
-
-        /* 組合價區塊 */
-        .bulk-price-detail {
-            font-size: 14px;
-            color: var(--accent-color);
-            font-weight: 600;
-            background-color: #fff7ed;
-            padding: 6px 10px;
-            border-radius: 6px;
-            margin-top: 4px;
-            display: inline-block;
         }
 
         .calculator-box {
@@ -248,7 +229,6 @@
         .calc-result {
             font-weight: 600;
             color: var(--accent-color);
-            text-align: right;
         }
 
         .store-info {
@@ -303,25 +283,17 @@
         let storeDatabase = [];
         let currentLang = 'zh';
 
-        // 同義詞與關聯字映射表
+        // 💡 同義詞與關聯字映射表 (同組內的詞語會相互觸發搜尋)
         const synonymGroups = [
-            ["雞翼", "雞中翼", "雞翅", "雞锤", "翅榜", "wing", "wings"],
-            ["皮蛋", "松花蛋", "century egg"],
-            ["蛋撻", "蛋塔", "酥皮蛋撻", "葡撻", "egg tart"],
+            ["雞翼", "雞中翼", "雞翅", "雞錘", "翅榜", "wing", "wings"],
             ["豬扒", "豬排", "pork chop"],
             ["牛扒", "牛排", "beef steak"],
             ["雞扒", "雞排", "chicken steak"],
             ["兩餸飯", "雙餸飯", "兩菜飯", "2 dishes"],
             ["三餸飯", "三菜飯", "3 dishes"],
-            ["可樂", "可口可樂", "cola", "coke"]
+            ["可樂", "可口可樂", "cola", "coke"],
+            ["紙巾", "卷紙", "抽紙", "衛生紙", "tissue"]
         ];
-
-        // 排除詞對照表
-        const excludeRules = {
-            "皮蛋": ["蛋撻", "蛋塔", "tart"],
-            "皮蛋撻": [], 
-            "蛋": ["蛋撻", "蛋塔"]
-        };
 
         const translations = {
             zh: {
@@ -335,12 +307,9 @@
                 lowestPriceBadge: "🔥 最低價",
                 lowestSummaryText: (min) => `🏷️ 目前搜尋結果最低價為：<strong>$${min}</strong>`,
                 flashSale: "限時優惠",
-                bulkThresholdBadge: (qty, price) => `滿 ${qty} 件起每件 $${price}`,
-                bulkBundleBadge: (qty) => `每 ${qty} 件組合優惠`,
-                bulkThresholdDetail: (qty, price) => `🎉 買滿 ${qty} 件起優惠價每件 $${price}`,
-                bulkBundleDetail: (qty, comboTotal, unitPrice) => `🎉 每 ${qty} 件組合價 $${comboTotal} <span style="font-size:12px; font-weight:normal;">(折合每件 $${unitPrice})</span>`,
+                bulkDiscount: (qty, price) => `買 ${qty} 件以上每件 $${price}`,
                 buyQty: "購買數量:",
-                totalPrice: (total, avgUnit) => `總計: <strong>$${total}</strong> <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">(平均每件 $${avgUnit})</span>`,
+                totalPrice: (total, unit) => `總計: <strong>$${total}</strong> (平均單價 $${unit})`,
                 mapLink: "地圖 ↗",
                 langBtn: "English"
             },
@@ -355,12 +324,9 @@
                 lowestPriceBadge: "🔥 Lowest Price",
                 lowestSummaryText: (min) => `🏷️ Lowest price in current results: <strong>$${min}</strong>`,
                 flashSale: "Flash Sale",
-                bulkThresholdBadge: (qty, price) => `$${price}/unit for ${qty}+ units`,
-                bulkBundleBadge: (qty) => `Every ${qty} Set Offer`,
-                bulkThresholdDetail: (qty, price) => `🎉 Special price $${price}/unit when buying ${qty}+ units`,
-                bulkBundleDetail: (qty, comboTotal, unitPrice) => `🎉 Every ${qty} items for $${comboTotal} <span style="font-size:12px; font-weight:normal;">($${unitPrice}/unit)</span>`,
+                bulkDiscount: (qty, price) => `Buy ${qty}+ for $${price} each`,
                 buyQty: "Qty:",
-                totalPrice: (total, avgUnit) => `Total: <strong>$${total}</strong> <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">($${avgUnit}/unit)</span>`,
+                totalPrice: (total, unit) => `Total: <strong>$${total}</strong> ($${unit}/unit)`,
                 mapLink: "Map ↗",
                 langBtn: "繁體中文"
             }
@@ -408,10 +374,7 @@
                     originalPrice: item.original_price || null,
                     bulkDiscount: item.min_bulk_qty ? {
                         minQty: item.min_bulk_qty,
-                        bulkPrice: item.bulk_price,
-                        // 💡 讀取優惠模式：'threshold'（門檻式） 或 'bundle'（每N件式）
-                        // 若資料庫未設定 bulk_type，預設使用 'threshold'
-                        type: item.bulk_type || 'threshold'
+                        bulkPrice: item.bulk_price
                     } : null,
                     store: { 
                         zh: item.store_zh || '', 
@@ -433,51 +396,24 @@
             }
         }
 
-        // 💡 雙模式價格計算演算法
         function calculatePrice(product, quantity) {
             const qty = Math.max(1, parseInt(quantity) || 1);
             const bulk = product.bulkDiscount;
 
-            if (bulk && bulk.minQty > 0) {
-                // ----------------------------------------------------
-                // 模式 A：【門檻模式 threshold】（例如：3件起，每件 $12）
-                // 只要數量 >= 門檻，所有商品皆以 $12 計算
-                // ----------------------------------------------------
-                if (bulk.type === 'threshold') {
-                    if (qty >= bulk.minQty) {
-                        const total = qty * bulk.bulkPrice;
-                        return {
-                            totalPrice: total.toFixed(1).replace(/\.0$/, ''),
-                            avgUnitPrice: bulk.bulkPrice
-                        };
-                    }
-                } 
-                // ----------------------------------------------------
-                // 模式 B：【組合模式 bundle】（例如：每 3 件 $36，第 4 件 $15）
-                // 按「組」享優惠，不足一組的餘數按原單價 $15 計算
-                // ----------------------------------------------------
-                else if (bulk.type === 'bundle') {
-                    const setSize = bulk.minQty; 
-                    const fullSets = Math.floor(qty / setSize); // 優惠組數
-                    const remainder = qty % setSize;           // 餘數單件
-
-                    const comboTotal = fullSets * setSize * bulk.bulkPrice;
-                    const remainderTotal = remainder * product.price;
-                    const totalPrice = comboTotal + remainderTotal;
-                    const avgUnitPrice = totalPrice / qty;
-
-                    return {
-                        totalPrice: totalPrice.toFixed(1).replace(/\.0$/, ''),
-                        avgUnitPrice: avgUnitPrice.toFixed(1).replace(/\.0$/, '')
-                    };
-                }
+            if (bulk && qty >= bulk.minQty) {
+                const total = qty * bulk.bulkPrice;
+                return {
+                    totalPrice: total.toFixed(1).replace(/\.0$/, ''),
+                    unitPrice: bulk.bulkPrice,
+                    isDiscounted: true
+                };
             }
 
-            // 未達門檻，全部以原單價計算
             const total = qty * product.price;
             return {
                 totalPrice: total.toFixed(1).replace(/\.0$/, ''),
-                avgUnitPrice: product.price
+                unitPrice: product.price,
+                isDiscounted: false
             };
         }
 
@@ -490,7 +426,7 @@
             if (!product || !qtyInput || !resultDisplay) return;
 
             const res = calculatePrice(product, qtyInput.value);
-            resultDisplay.innerHTML = t.totalPrice(res.totalPrice, res.avgUnitPrice);
+            resultDisplay.innerHTML = t.totalPrice(res.totalPrice, res.unitPrice);
         }
 
         function renderProducts(products) {
@@ -522,34 +458,104 @@
                     : getGoogleMapUrl(store, address);
 
                 let badges = '';
-                let bulkDetailHtml = '';
-
                 if (isLowest) {
                     badges += `<span class="badge badge-lowest">${t.lowestPriceBadge}</span>`;
                 }
                 if (product.isFlashSale) {
                     badges += `<span class="badge badge-flash">${t.flashSale}</span>`;
                 }
-
-                // 💡 依據 bulk_type 產生對應標籤與說明文案
                 if (product.bulkDiscount) {
-                    const b = product.bulkDiscount;
-                    if (b.type === 'threshold') {
-                        // 模式 A
-                        badges += `<span class="badge badge-bulk">${t.bulkThresholdBadge(b.minQty, b.bulkPrice)}</span>`;
-                        bulkDetailHtml = `<div class="bulk-price-detail">${t.bulkThresholdDetail(b.minQty, b.bulkPrice)}</div>`;
-                    } else if (b.type === 'bundle') {
-                        // 模式 B
-                        const comboTotal = (b.minQty * b.bulkPrice).toFixed(1).replace(/\.0$/, '');
-                        badges += `<span class="badge badge-bulk">${t.bulkBundleBadge(b.minQty)}</span>`;
-                        bulkDetailHtml = `<div class="bulk-price-detail">${t.bulkBundleDetail(b.minQty, comboTotal, b.bulkPrice)}</div>`;
-                    }
+                    badges += `<span class="badge badge-bulk">${t.bulkDiscount(product.bulkDiscount.minQty, product.bulkDiscount.bulkPrice)}</span>`;
                 }
 
-                const calcBlock = `
+                const calcBlock = product.bulkDiscount ? `
                     <div class="calculator-box">
                         <div>
                             ${t.buyQty} 
                             <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc(${product.id})">
                         </div>
-                        <div class="calc
+                        <div class="calc-result" id="res-${product.id}">
+                            ${t.totalPrice(product.price, product.price)}
+                        </div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="product-card ${isLowest ? 'is-lowest' : ''}">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${name}</div>
+                                ${weight ? `<div style="font-size: 12px; color: var(--text-muted);">${weight}</div>` : ''}
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
+
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
+
+                        ${calcBlock}
+
+                        <div class="store-info">
+                            <span>📍 ${store} ${address ? `(${address})` : ''}</span>
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 💡 取得關鍵字的所有擴充同義詞
+        function getExpandedKeywords(query) {
+            const keywords = new Set([query]);
+            
+            synonymGroups.forEach(group => {
+                // 如果輸入的搜尋詞包含同義詞組中的任何一個字眼
+                const match = group.some(term => query.includes(term.toLowerCase()) || term.toLowerCase().includes(query));
+                if (match) {
+                    group.forEach(term => keywords.add(term.toLowerCase()));
+                }
+            });
+
+            return Array.from(keywords);
+        }
+
+        function handleSearch() {
+            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
+            const t = translations[currentLang];
+
+            if (!rawQuery) {
+                container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
+                summaryBox.style.display = 'none';
+                return;
+            }
+            
+            // 取得包含擴充同義詞的關鍵字陣列 (例如搜尋 "雞翼" -> ["雞翼", "雞中翼", "雞翅", "wings", ...])
+            const searchTerms = getExpandedKeywords(rawQuery);
+
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const storeEn = product.store.en.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+                const addressEn = product.address.en.toLowerCase();
+
+                // 只要商品名稱、店名或地址命中任何一個擴充關鍵字即算搜尋成功
+                return searchTerms.some(term => 
+                    nameZh.includes(term) || nameEn.includes(term) || 
+                    storeZh.includes(term) || storeEn.includes(term) || 
+                    addressZh.includes(term) || addressEn.includes(term)
+                );
+            });
+
+            renderProducts(filtered);
+        }
+
+        fetchProductsFromCloud();
+    </script>
+</body>
+</html>
