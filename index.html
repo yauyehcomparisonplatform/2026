@@ -253,9 +253,9 @@
 </head>
 <body>
 
-    <!-- 最頂端的圖片 Banner -->
-    <div class="top-banner">
-        <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png" alt="YAU Yeh Banner">
+    <!-- 最頂端的圖片 Banner（加上 onerror 防破圖） -->
+    <div class="top-banner" id="bannerContainer">
+        <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png" alt="YAU Yeh Banner" onerror="document.getElementById('bannerContainer').style.display='none'">
     </div>
 
     <header>
@@ -277,13 +277,14 @@
 
     <script>
         const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
+        // ⚠️ 請在此處填入你 Supabase 後台 Project Settings -> API -> anon public key
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjcXNqYXVyemVoa29pdGJsdmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NDk5MDgsImV4cCI6MjEwNTAyNTkwOH0.A_lL8Ny5P6lhuGWg6kHVZfsMKPYaSm7zWSYs8fapUS8'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let storeDatabase = [];
         let currentLang = 'zh';
 
-        // 💡 同義詞與關聯字映射表 (同組內的詞語會相互觸發搜尋)
+        // 💡 同義詞與關聯字映射表
         const synonymGroups = [
             ["雞翼", "雞中翼", "雞翅", "雞錘", "翅榜", "wing", "wings"],
             ["豬扒", "豬排", "pork chop"],
@@ -301,7 +302,7 @@
                 subtitle: "比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠",
                 searchPlaceholder: "搜尋商品名稱、商店名稱（如：兩餸飯、旺角）...",
                 loading: "資料載入中，請稍候...",
-                loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
+                loadError: "資料載入失敗，請檢查 Supabase 連線設定與 API Key。",
                 initialPrompt: "🔍 請在上方搜尋框輸入關鍵字開始比價",
                 emptyState: "沒有找到相關商品",
                 lowestPriceBadge: "🔥 最低價",
@@ -318,7 +319,7 @@
                 subtitle: "We compare the prices, specifications, and addresses of various products from shops in Yau Tsim Mong to find the best deals and lowest prices for you.",
                 searchPlaceholder: "Search item, store name, or location...",
                 loading: "Loading data, please wait...",
-                loadError: "Failed to load data. Please check Supabase setup.",
+                loadError: "Failed to load data. Please check Supabase setup and API key.",
                 initialPrompt: "🔍 Type a keyword in the search bar above to compare prices",
                 emptyState: "No products found",
                 lowestPriceBadge: "🔥 Lowest Price",
@@ -328,6 +329,235 @@
                 buyQty: "Qty:",
                 totalPrice: (total, unit) => `Total: <strong>$${total}</strong> ($${unit}/unit)`,
                 mapLink: "Map ↗",
+                langBtn: "繁體中文"
+            }
+        };
+
+        function getGoogleMapUrl(store, address) {
+            const query = [store, address].filter(Boolean).join(' ');
+            if (!query) return null;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            document.documentElement.lang = currentLang === 'zh' ? 'zh-Hant' : 'en';
+            
+            const t = translations[currentLang];
+            document.getElementById('siteTitle').innerText = t.title;
+            document.getElementById('siteSubtitle').innerText = t.subtitle;
+            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+            document.getElementById('langBtn').innerText = t.langBtn;
+
+            handleSearch();
+        }
+
+        async function fetchProductsFromCloud() {
+            const t = translations[currentLang];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
+
+                if (error) throw error;
+
+                storeDatabase = data.map(item => ({
+                    id: String(item.id),
+                    name: { 
+                        zh: item.name_zh || '', 
+                        en: item.name_en || item.name_zh || '' 
+                    },
+                    weight: { 
+                        zh: item.weight_zh || '', 
+                        en: item.weight_en || item.weight_zh || '' 
+                    },
+                    price: Number(item.price) || 0,
+                    originalPrice: item.original_price ? Number(item.original_price) : null,
+                    bulkDiscount: item.min_bulk_qty ? {
+                        minQty: Number(item.min_bulk_qty),
+                        bulkPrice: Number(item.bulk_price)
+                    } : null,
+                    store: { 
+                        zh: item.store_zh || '', 
+                        en: item.store_en || item.store_zh || '' 
+                    },
+                    address: { 
+                        zh: item.address_zh || '', 
+                        en: item.address_en || item.address_zh || '' 
+                    },
+                    url: item.url || '#',
+                    isFlashSale: item.is_flash_sale || false
+                }));
+
+                document.getElementById('loading').style.display = 'none';
+                handleSearch();
+            } catch (err) {
+                console.error("Cloud data load error:", err.message);
+                document.getElementById('loading').innerText = t.loadError;
+            }
+        }
+
+        function calculatePrice(product, quantity) {
+            const qty = Math.max(1, parseInt(quantity) || 1);
+            const bulk = product.bulkDiscount;
+
+            if (bulk && qty >= bulk.minQty) {
+                const total = qty * bulk.bulkPrice;
+                return {
+                    totalPrice: total.toFixed(1).replace(/\.0$/, ''),
+                    unitPrice: bulk.bulkPrice,
+                    isDiscounted: true
+                };
+            }
+
+            const total = qty * product.price;
+            return {
+                totalPrice: total.toFixed(1).replace(/\.0$/, ''),
+                unitPrice: product.price,
+                isDiscounted: false
+            };
+        }
+
+        function updateCalc(productId) {
+            const t = translations[currentLang];
+            const product = storeDatabase.find(p => String(p.id) === String(productId));
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const resultDisplay = document.getElementById(`res-${productId}`);
+
+            if (!product || !qtyInput || !resultDisplay) return;
+
+            const res = calculatePrice(product, qtyInput.value);
+            resultDisplay.innerHTML = t.totalPrice(res.totalPrice, res.unitPrice);
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
+            const t = translations[currentLang];
+            
+            if (products.length === 0) {
+                container.innerHTML = `<div class="empty-state">${t.emptyState}</div>`;
+                summaryBox.style.display = 'none';
+                return;
+            }
+
+            const minPrice = Math.min(...products.map(p => p.price));
+
+            summaryBox.style.display = 'flex';
+            summaryBox.innerHTML = t.lowestSummaryText(minPrice);
+
+            container.innerHTML = products.map(product => {
+                const name = product.name[currentLang];
+                const weight = product.weight[currentLang];
+                const store = product.store[currentLang];
+                const address = product.address[currentLang];
+
+                const isLowest = product.price === minPrice;
+
+                const mapUrl = (product.url && product.url !== '#') 
+                    ? product.url 
+                    : getGoogleMapUrl(store, address);
+
+                let badges = '';
+                if (isLowest) {
+                    badges += `<span class="badge badge-lowest">${t.lowestPriceBadge}</span>`;
+                }
+                if (product.isFlashSale) {
+                    badges += `<span class="badge badge-flash">${t.flashSale}</span>`;
+                }
+                if (product.bulkDiscount) {
+                    badges += `<span class="badge badge-bulk">${t.bulkDiscount(product.bulkDiscount.minQty, product.bulkDiscount.bulkPrice)}</span>`;
+                }
+
+                const calcBlock = product.bulkDiscount ? `
+                    <div class="calculator-box">
+                        <div>
+                            ${t.buyQty} 
+                            <input type="number" id="qty-${product.id}" class="calculator-input" value="1" min="1" oninput="updateCalc('${product.id}')">
+                        </div>
+                        <div class="calc-result" id="res-${product.id}">
+                            ${t.totalPrice(product.price, product.price)}
+                        </div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="product-card ${isLowest ? 'is-lowest' : ''}">
+                        <div class="card-header">
+                            <div>
+                                <div class="product-title">${name}</div>
+                                ${weight ? `<div style="font-size: 12px; color: var(--text-muted);">${weight}</div>` : ''}
+                            </div>
+                            <div class="badge-container">${badges}</div>
+                        </div>
+
+                        <div class="price-section">
+                            <span class="current-price">$${product.price}</span>
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
+
+                        ${calcBlock}
+
+                        <div class="store-info">
+                            <span>📍 ${store} ${address ? `(${address})` : ''}</span>
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 💡 取得關鍵字的所有擴充同義詞
+        function getExpandedKeywords(query) {
+            const keywords = new Set([query]);
+            
+            synonymGroups.forEach(group => {
+                const match = group.some(term => query.includes(term.toLowerCase()) || term.toLowerCase().includes(query));
+                if (match) {
+                    group.forEach(term => keywords.add(term.toLowerCase()));
+                }
+            });
+
+            return Array.from(keywords);
+        }
+
+        function handleSearch() {
+            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
+            const t = translations[currentLang];
+
+            if (!rawQuery) {
+                container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
+                summaryBox.style.display = 'none';
+                return;
+            }
+            
+            const searchTerms = getExpandedKeywords(rawQuery);
+
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const storeEn = product.store.en.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+                const addressEn = product.address.en.toLowerCase();
+
+                return searchTerms.some(term => 
+                    nameZh.includes(term) || nameEn.includes(term) || 
+                    storeZh.includes(term) || storeEn.includes(term) || 
+                    addressZh.includes(term) || addressEn.includes(term)
+                );
+            });
+
+            renderProducts(filtered);
+        }
+
+        fetchProductsFromCloud();
+    </script>
+</body>
+</html>
+            mapLink: "Map ↗",
                 langBtn: "繁體中文"
             }
         };
