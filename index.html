@@ -120,6 +120,15 @@
             color: var(--text-muted);
         }
 
+        .error-msg {
+            color: #dc2626;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
         .product-list {
             display: flex;
             flex-direction: column;
@@ -293,12 +302,20 @@
     <script>
         const SUPABASE_URL = 'https://rcqsjaurzehkoitblvli.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_8F5Kp487KzmnxgDJifgTtQ_2kqLcj2n';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        
+        let supabaseClient = null;
         let storeDatabase = [];
         let currentLang = 'zh';
 
-        // 💡 同義詞與關聯字映射表
+        // 初始化 Supabase 防錯
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch (e) {
+            console.error("Supabase Init Error:", e);
+        }
+
         const synonymGroups = [
             ["雞翼", "雞中翼", "雞翅", "雞錘", "翅榜", "wing", "wings"],
             ["豬扒", "豬排", "pork chop"],
@@ -316,7 +333,7 @@
                 subtitle: "比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠",
                 searchPlaceholder: "搜尋商品名稱、商店名稱（如：兩餸飯、旺角）...",
                 loading: "資料載入中，請稍候...",
-                loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
+                loadError: "資料載入失敗，請檢查網路或 Supabase 設定。",
                 initialPrompt: "🔍 請在上方搜尋框輸入關鍵字開始比價",
                 emptyState: "沒有找到相關商品",
                 lowestPriceBadge: "🔥 最低價",
@@ -334,7 +351,7 @@
                 subtitle: "We compare the prices, specifications, and addresses of various products from shops in Yau Tsim Mong to find the best deals and lowest prices for you.",
                 searchPlaceholder: "Search item, store name, or location...",
                 loading: "Loading data, please wait...",
-                loadError: "Failed to load data. Please check Supabase setup.",
+                loadError: "Failed to load data. Please check connection.",
                 initialPrompt: "🔍 Type a keyword in the search bar above to compare prices",
                 emptyState: "No products found",
                 lowestPriceBadge: "🔥 Lowest Price",
@@ -370,6 +387,13 @@
 
         async function fetchProductsFromCloud() {
             const t = translations[currentLang];
+            const loadingEl = document.getElementById('loading');
+
+            if (!supabaseClient) {
+                loadingEl.innerHTML = `<div class="error-msg">${t.loadError} (Supabase SDK 未成功初始化)</div>`;
+                return;
+            }
+
             try {
                 const { data, error } = await supabaseClient
                     .from('products')
@@ -377,62 +401,63 @@
 
                 if (error) throw error;
 
-                storeDatabase = data.map(item => {
-                    // 1. 起售價邏輯：支援原有 min_bulk_qty/bulk_price，亦相容 min_qty/tier_price
-                    const bulkMinQty = item.min_qty || item.min_bulk_qty || null;
-                    const bulkPrice = item.tier_price || item.bulk_price || null;
+                if (!data) {
+                    storeDatabase = [];
+                } else {
+                    storeDatabase = data.map(item => {
+                        // 防錯性欄位讀取
+                        const bulkMinQty = item.min_bulk_qty ?? item.min_qty ?? null;
+                        const bulkPrice = item.bulk_price ?? item.tier_price ?? null;
 
-                    // 2. 組合價邏輯 (例: 每3件$18)
-                    const bundleQty = item.bundle_qty || null;
-                    const bundlePrice = item.bundle_price || null;
+                        const bundleQty = item.bundle_qty ?? null;
+                        const bundlePrice = item.bundle_price ?? null;
 
-                    return {
-                        id: item.id,
-                        name: { 
-                            zh: item.name_zh || '', 
-                            en: item.name_en || item.name_zh || '' 
-                        },
-                        weight: { 
-                            zh: item.weight_zh || '', 
-                            en: item.weight_en || item.weight_zh || '' 
-                        },
-                        price: item.price || 0,
-                        originalPrice: item.original_price || null,
-                        bulkDiscount: (bulkMinQty && bulkPrice) ? {
-                            minQty: Number(bulkMinQty),
-                            bulkPrice: Number(bulkPrice)
-                        } : null,
-                        bundleDiscount: (bundleQty && bundlePrice) ? {
-                            bundleQty: Number(bundleQty),
-                            bundlePrice: Number(bundlePrice)
-                        } : null,
-                        store: { 
-                            zh: item.store_zh || '', 
-                            en: item.store_en || item.store_zh || '' 
-                        },
-                        address: { 
-                            zh: item.address_zh || '', 
-                            en: item.address_en || item.address_zh || '' 
-                        },
-                        url: item.url || '#',
-                        isFlashSale: item.is_flash_sale || false
-                    };
-                });
+                        return {
+                            id: item.id,
+                            name: { 
+                                zh: item.name_zh || '', 
+                                en: item.name_en || item.name_zh || '' 
+                            },
+                            weight: { 
+                                zh: item.weight_zh || '', 
+                                en: item.weight_en || item.weight_zh || '' 
+                            },
+                            price: Number(item.price) || 0,
+                            originalPrice: item.original_price ? Number(item.original_price) : null,
+                            bulkDiscount: (bulkMinQty && bulkPrice) ? {
+                                minQty: Number(bulkMinQty),
+                                bulkPrice: Number(bulkPrice)
+                            } : null,
+                            bundleDiscount: (bundleQty && bundlePrice) ? {
+                                bundleQty: Number(bundleQty),
+                                bundlePrice: Number(bundlePrice)
+                            } : null,
+                            store: { 
+                                zh: item.store_zh || '', 
+                                en: item.store_en || item.store_zh || '' 
+                            },
+                            address: { 
+                                zh: item.address_zh || '', 
+                                en: item.address_en || item.address_zh || '' 
+                            },
+                            url: item.url || '#',
+                            isFlashSale: !!item.is_flash_sale
+                        };
+                    });
+                }
 
-                document.getElementById('loading').style.display = 'none';
+                loadingEl.style.display = 'none';
                 handleSearch();
             } catch (err) {
-                console.error("Cloud data load error:", err.message);
-                document.getElementById('loading').innerText = t.loadError;
+                console.error("Cloud data load error:", err);
+                loadingEl.innerHTML = `<div class="error-msg">${t.loadError}<br><small>詳細錯誤: ${err.message || err}</small></div>`;
             }
         }
 
-        // 💡 計算即時總價與平均單價
         function calculatePrice(product, quantity) {
             const qty = Math.max(1, parseInt(quantity) || 1);
             let totalPrice = 0;
 
-            // 情況 1: 組合價 (例如每 3 件 $18，不滿 3 件按單價 $7 計算)
             if (product.bundleDiscount) {
                 const bQty = product.bundleDiscount.bundleQty;
                 const bPrice = product.bundleDiscount.bundlePrice;
@@ -441,11 +466,9 @@
 
                 totalPrice = (fullBundles * bPrice) + (remainder * product.price);
             } 
-            // 情況 2: 起售價 (例如 3 件或以上每件 $6，否則原價 $7)
             else if (product.bulkDiscount && qty >= product.bulkDiscount.minQty) {
                 totalPrice = qty * product.bulkDiscount.bulkPrice;
             } 
-            // 情況 3: 一般單價
             else {
                 totalPrice = qty * product.price;
             }
@@ -512,7 +535,6 @@
                     badges += `<span class="badge badge-bundle">${t.bundleDiscount(product.bundleDiscount.bundleQty, product.bundleDiscount.bundlePrice)}</span>`;
                 }
 
-                // 規則說明文字 (顯示在主價格下方)
                 let priceRuleText = '';
                 if (product.bulkDiscount) {
                     priceRuleText = `<div class="price-rule-detail">💡 單買 $${product.price} / 件，滿 ${product.bulkDiscount.minQty} 件起每件 $${product.bulkDiscount.bulkPrice}</div>`;
@@ -520,7 +542,6 @@
                     priceRuleText = `<div class="price-rule-detail">💡 單買 $${product.price} / 件，每 ${product.bundleDiscount.bundleQty} 件組合價 $${product.bundleDiscount.bundlePrice}</div>`;
                 }
 
-                // 只要商品包含起售價、組合價，或有多件購買需求，均顯示動態計算器
                 const calcBlock = (product.bulkDiscount || product.bundleDiscount) ? `
                     <div class="calculator-box">
                         <div>
@@ -540,18 +561,4 @@
                                 <div class="product-title">${name}</div>
                                 ${weight ? `<div style="font-size: 12px; color: var(--text-muted);">${weight}</div>` : ''}
                             </div>
-                            <div class="badge-container">${badges}</div>
-                        </div>
-
-                        <div class="price-section">
-                            <span class="current-price">$${product.price}</span>
-                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
-                        </div>
-
-                        ${priceRuleText}
-
-                        ${calcBlock}
-
-                        <div class="store-info">
-                            <span>📍 ${store} ${address ? `(${address})` : ''}</span>
-                            ${mapUrl ? `<a href="$
+         
