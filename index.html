@@ -32,6 +32,7 @@
             margin: 0 auto;
         }
 
+        /* 最頂端圖片 Banner 樣式 */
         .top-banner {
             width: 100%;
             margin-bottom: 20px;
@@ -200,15 +201,6 @@
             color: var(--lowest-price-color);
         }
 
-        .unit-price-display {
-            font-size: 13px;
-            color: #059669;
-            background-color: #ecfdf5;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-
         .original-price {
             font-size: 14px;
             color: var(--text-muted);
@@ -261,6 +253,7 @@
 </head>
 <body>
 
+    <!-- 最頂端的圖片 Banner -->
     <div class="top-banner">
         <img src="Price comparison platform_Notion banner (1500 x 800 px) (1500 x 200 px).png" alt="YAU Yeh Banner">
     </div>
@@ -290,6 +283,7 @@
         let storeDatabase = [];
         let currentLang = 'zh';
 
+        // 💡 同義詞與關聯字映射表 (同組內的詞語會相互觸發搜尋)
         const synonymGroups = [
             ["雞翼", "雞中翼", "雞翅", "雞錘", "翅榜", "wing", "wings"],
             ["豬扒", "豬排", "pork chop"],
@@ -310,8 +304,8 @@
                 loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
                 initialPrompt: "🔍 請在上方搜尋框輸入關鍵字開始比價",
                 emptyState: "沒有找到相關商品",
-                lowestPriceBadge: "🔥 性價比最高",
-                lowestSummaryText: (min, label) => `🏷️ 目前結果最高性價比為：平均 <strong>$${min}${label}</strong>`,
+                lowestPriceBadge: "🔥 最低價",
+                lowestSummaryText: (min) => `🏷️ 目前搜尋結果最低價為：<strong>$${min}</strong>`,
                 flashSale: "限時優惠",
                 bulkDiscount: (qty, price) => `買 ${qty} 件以上每件 $${price}`,
                 buyQty: "購買數量:",
@@ -321,14 +315,14 @@
             },
             en: {
                 title: "YAU Yeh Price Comparison Platform",
-                subtitle: "We compare prices, specifications, and locations to find you the best value.",
+                subtitle: "We compare the prices, specifications, and addresses of various products from shops in Yau Tsim Mong to find the best deals and lowest prices for you.",
                 searchPlaceholder: "Search item, store name, or location...",
                 loading: "Loading data, please wait...",
                 loadError: "Failed to load data. Please check Supabase setup.",
                 initialPrompt: "🔍 Type a keyword in the search bar above to compare prices",
                 emptyState: "No products found",
-                lowestPriceBadge: "🔥 Best Value",
-                lowestSummaryText: (min, label) => `🏷️ Best value in results: <strong>$${min}${label}</strong>`,
+                lowestPriceBadge: "🔥 Lowest Price",
+                lowestSummaryText: (min) => `🏷️ Lowest price in current results: <strong>$${min}</strong>`,
                 flashSale: "Flash Sale",
                 bulkDiscount: (qty, price) => `Buy ${qty}+ for $${price} each`,
                 buyQty: "Qty:",
@@ -337,56 +331,6 @@
                 langBtn: "繁體中文"
             }
         };
-
-        // 💡 自動解析單位規格並計算每 100g/ml/件 的平均價格
-        function parseUnitPrice(weightStr, price) {
-            if (!weightStr || price <= 0) return { unitPrice: price, label: '' };
-
-            const normalized = weightStr.toLowerCase().trim();
-
-            // 匹配 kg (例: 1.5kg, 500克, 2kg) -> 換算為每 100g 價格
-            let match = normalized.match(/([\d\.]+)\s*(kg|千克|公斤)/);
-            if (match) {
-                const grams = parseFloat(match[1]) * 1000;
-                const unitPrice = (price / grams) * 100;
-                return { unitPrice: parseFloat(unitPrice.toFixed(2)), label: '/100g' };
-            }
-
-            // 匹配 g / 克 (例: 500g, 250克) -> 換算為每 100g 價格
-            match = normalized.match(/([\d\.]+)\s*(g|克|公克)/);
-            if (match) {
-                const grams = parseFloat(match[1]);
-                const unitPrice = (price / grams) * 100;
-                return { unitPrice: parseFloat(unitPrice.toFixed(2)), label: '/100g' };
-            }
-
-            // 匹配 L / 升 (例: 1.25l, 2升) -> 換算為每 100ml 價格
-            match = normalized.match(/([\d\.]+)\s*(l|升|公升)/);
-            if (match) {
-                const ml = parseFloat(match[1]) * 1000;
-                const unitPrice = (price / ml) * 100;
-                return { unitPrice: parseFloat(unitPrice.toFixed(2)), label: '/100ml' };
-            }
-
-            // 匹配 ml / 毫升 (例: 330ml) -> 換算為每 100ml 價格
-            match = normalized.match(/([\d\.]+)\s*(ml|毫升)/);
-            if (match) {
-                const ml = parseFloat(match[1]);
-                const unitPrice = (price / ml) * 100;
-                return { unitPrice: parseFloat(unitPrice.toFixed(2)), label: '/100ml' };
-            }
-
-            // 匹配 件/包/個/卷 (例: 3件, 10卷, 6包) -> 換算為每 1 件價格
-            match = normalized.match(/([\d\.]+)\s*(包|件|個|卷|條|罐|支|pack|pcs|rolls)/);
-            if (match) {
-                const count = parseFloat(match[1]);
-                const unitPrice = price / count;
-                return { unitPrice: parseFloat(unitPrice.toFixed(2)), label: '/件' };
-            }
-
-            // 無法解析數量單位時，按原價計算
-            return { unitPrice: price, label: '' };
-        }
 
         function getGoogleMapUrl(store, address) {
             const query = [store, address].filter(Boolean).join(' ');
@@ -416,40 +360,33 @@
 
                 if (error) throw error;
 
-                storeDatabase = data.map(item => {
-                    const weightZh = item.weight_zh || '';
-                    const calculated = parseUnitPrice(weightZh, item.price || 0);
-
-                    return {
-                        id: item.id,
-                        name: { 
-                            zh: item.name_zh || '', 
-                            en: item.name_en || item.name_zh || '' 
-                        },
-                        weight: { 
-                            zh: weightZh, 
-                            en: item.weight_en || weightZh 
-                        },
-                        price: item.price || 0,
-                        unitPrice: calculated.unitPrice,  // 自動計算出之單位均價
-                        unitLabel: calculated.label,      // 單位標籤，如 /100g
-                        originalPrice: item.original_price || null,
-                        bulkDiscount: item.min_bulk_qty ? {
-                            minQty: item.min_bulk_qty,
-                            bulkPrice: item.bulk_price
-                        } : null,
-                        store: { 
-                            zh: item.store_zh || '', 
-                            en: item.store_en || item.store_zh || '' 
-                        },
-                        address: { 
-                            zh: item.address_zh || '', 
-                            en: item.address_en || item.address_zh || '' 
-                        },
-                        url: item.url || '#',
-                        isFlashSale: item.is_flash_sale || false
-                    };
-                });
+                storeDatabase = data.map(item => ({
+                    id: item.id,
+                    name: { 
+                        zh: item.name_zh || '', 
+                        en: item.name_en || item.name_zh || '' 
+                    },
+                    weight: { 
+                        zh: item.weight_zh || '', 
+                        en: item.weight_en || item.weight_zh || '' 
+                    },
+                    price: item.price || 0,
+                    originalPrice: item.original_price || null,
+                    bulkDiscount: item.min_bulk_qty ? {
+                        minQty: item.min_bulk_qty,
+                        bulkPrice: item.bulk_price
+                    } : null,
+                    store: { 
+                        zh: item.store_zh || '', 
+                        en: item.store_en || item.store_zh || '' 
+                    },
+                    address: { 
+                        zh: item.address_zh || '', 
+                        en: item.address_en || item.address_zh || '' 
+                    },
+                    url: item.url || '#',
+                    isFlashSale: item.is_flash_sale || false
+                }));
 
                 document.getElementById('loading').style.display = 'none';
                 handleSearch();
@@ -503,12 +440,10 @@
                 return;
             }
 
-            // 💡 改用自動算出的 unitPrice (單位均價) 來判定最佳 CP 值
-            const minUnitPrice = Math.min(...products.map(p => p.unitPrice));
-            const bestProduct = products.find(p => p.unitPrice === minUnitPrice);
+            const minPrice = Math.min(...products.map(p => p.price));
 
             summaryBox.style.display = 'flex';
-            summaryBox.innerHTML = t.lowestSummaryText(minUnitPrice, bestProduct ? bestProduct.unitLabel : '');
+            summaryBox.innerHTML = t.lowestSummaryText(minPrice);
 
             container.innerHTML = products.map(product => {
                 const name = product.name[currentLang];
@@ -516,8 +451,7 @@
                 const store = product.store[currentLang];
                 const address = product.address[currentLang];
 
-                // 單位均價相等即獲選為最高性價比（最低價）
-                const isLowest = product.unitPrice === minUnitPrice;
+                const isLowest = product.price === minPrice;
 
                 const mapUrl = (product.url && product.url !== '#') 
                     ? product.url 
@@ -558,5 +492,70 @@
 
                         <div class="price-section">
                             <span class="current-price">$${product.price}</span>
-                            ${product.unitLabel ? `<span class="unit-price-display">約 $${product.unitPrice}${product.unitLabel}</span>` : ''}
-                            ${product.originalP
+                            ${product.originalPrice ? `<span class="original-price">$${product.originalPrice}</span>` : ''}
+                        </div>
+
+                        ${calcBlock}
+
+                        <div class="store-info">
+                            <span>📍 ${store} ${address ? `(${address})` : ''}</span>
+                            ${mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="store-link">${t.mapLink}</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 💡 取得關鍵字的所有擴充同義詞
+        function getExpandedKeywords(query) {
+            const keywords = new Set([query]);
+            
+            synonymGroups.forEach(group => {
+                // 如果輸入的搜尋詞包含同義詞組中的任何一個字眼
+                const match = group.some(term => query.includes(term.toLowerCase()) || term.toLowerCase().includes(query));
+                if (match) {
+                    group.forEach(term => keywords.add(term.toLowerCase()));
+                }
+            });
+
+            return Array.from(keywords);
+        }
+
+        function handleSearch() {
+            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const container = document.getElementById('productList');
+            const summaryBox = document.getElementById('lowestSummary');
+            const t = translations[currentLang];
+
+            if (!rawQuery) {
+                container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
+                summaryBox.style.display = 'none';
+                return;
+            }
+            
+            // 取得包含擴充同義詞的關鍵字陣列 (例如搜尋 "雞翼" -> ["雞翼", "雞中翼", "雞翅", "wings", ...])
+            const searchTerms = getExpandedKeywords(rawQuery);
+
+            const filtered = storeDatabase.filter(product => {
+                const nameZh = product.name.zh.toLowerCase();
+                const nameEn = product.name.en.toLowerCase();
+                const storeZh = product.store.zh.toLowerCase();
+                const storeEn = product.store.en.toLowerCase();
+                const addressZh = product.address.zh.toLowerCase();
+                const addressEn = product.address.en.toLowerCase();
+
+                // 只要商品名稱、店名或地址命中任何一個擴充關鍵字即算搜尋成功
+                return searchTerms.some(term => 
+                    nameZh.includes(term) || nameEn.includes(term) || 
+                    storeZh.includes(term) || storeEn.includes(term) || 
+                    addressZh.includes(term) || addressEn.includes(term)
+                );
+            });
+
+            renderProducts(filtered);
+        }
+
+        fetchProductsFromCloud();
+    </script>
+</body>
+</html>
