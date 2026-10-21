@@ -261,7 +261,7 @@
     <header>
         <div class="header-title">
             <h1 id="siteTitle">YAU嘢格價搜尋平台</h1>
-            <p id="siteSubtitle" style="color: var(--text-muted); font-size: 14px;">比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠</p>
+            <p id="siteSubtitle" style="color: var(--text-muted); font-size: 14px;">比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠(所有價格均為人工錄入，僅供參考。最終售價以門市發售為準)</p>
         </div>
         <button class="lang-btn" id="langBtn" onclick="toggleLanguage()">English</button>
     </header>
@@ -292,13 +292,14 @@
             ["兩餸飯", "雙餸飯", "兩菜飯", "2 dishes"],
             ["三餸飯", "三菜飯", "3 dishes"],
             ["可樂", "可口可樂", "cola", "coke"],
-            ["紙巾", "卷紙", "抽紙", "衛生紙", "tissue"]
+            ["紙巾", "卷紙", "抽紙", "衛生紙", "tissue"],
+            ["豬展", "豬𦟌"]
         ];
 
         const translations = {
             zh: {
                 title: "YAU嘢格價搜尋平台",
-                subtitle: "比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠",
+                subtitle: "比較油尖旺小店不同商品的價格、規格與地址，為大家找出最低價優惠(所有價格均為人工錄入，僅供參考。最終售價以門市發售為準)",
                 searchPlaceholder: "搜尋商品名稱、商店名稱（如：兩餸飯、旺角）...",
                 loading: "資料載入中，請稍候...",
                 loadError: "資料載入失敗，請檢查 Supabase 連線設定。",
@@ -316,7 +317,7 @@
             },
             en: {
                 title: "YAU Yeh Price Comparison Platform",
-                subtitle: "We compare the prices, specifications, and addresses of various products from shops in Yau Tsim Mong to find the best deals and lowest prices for you.",
+                subtitle: "We compare the prices, specifications, and addresses of various products from shops in Yau Tsim Mong to find the best deals and lowest prices for you.(All prices are entered manually and provided for reference only. In-store prices shall prevail in the event of any discrepancy.)",
                 searchPlaceholder: "Search item, store name, or location...",
                 loading: "Loading data, please wait...",
                 loadError: "Failed to load data. Please check Supabase setup.",
