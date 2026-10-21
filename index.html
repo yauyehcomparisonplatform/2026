@@ -556,13 +556,7 @@
             const summaryBox = document.getElementById('lowestSummary');
             const t = translations[currentLang];
 
-                 function handleSearch() {
-            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            const container = document.getElementById('productList');
-            const summaryBox = document.getElementById('lowestSummary');
-            const t = translations[currentLang];
-
-            if (!rawQuery) {
+                       if (!rawQuery) {
                 container.innerHTML = `<div class="initial-prompt">${t.initialPrompt}</div>`;
                 summaryBox.style.display = 'none';
                 return;
